@@ -63,7 +63,8 @@
         button:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
-<body class="bg-background text-primary font-sans antialiased h-screen flex overflow-hidden selection:bg-accent selection:text-background">
+<!-- Changed h-screen to h-[100dvh] for perfect mobile scrolling -->
+<body class="bg-background text-primary font-sans antialiased h-[100dvh] flex overflow-hidden selection:bg-accent selection:text-background">
 
     <!-- ================= 1. LEFT SIDEBAR (DESKTOP) ================= -->
     <aside class="w-64 bg-surface border-r border-gray-800 flex-col justify-between hidden lg:flex z-30 h-full overflow-y-auto" aria-label="Sidebar Navigation">
@@ -148,8 +149,8 @@
             </div>
         </header>
 
-        <!-- SCROLLABLE CONTENT AREA -->
-        <div class="flex-1 overflow-y-auto pb-20 lg:pb-0 relative" id="main-scroll-area">
+        <!-- SCROLLABLE CONTENT AREA (Increased bottom padding to pb-32 to clear mobile nav completely) -->
+        <div class="flex-1 overflow-y-auto pb-32 lg:pb-10 relative scroll-smooth" id="main-scroll-area">
             
             <!-- Global Loading State -->
             <div id="global-loader" class="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center transition-opacity">
@@ -471,6 +472,14 @@
                             <button type="submit" id="btn-save-profile" class="w-full bg-accent text-background font-bold py-3 rounded-lg focus-ring hover:bg-yellow-600 transition-colors">Save Changes</button>
                         </div>
                     </form>
+                    
+                    <!-- LOGOUT BUTTON IN PROFILE FOR MOBILE ACCESSIBILITY -->
+                    <div class="bg-surface border border-gray-800 rounded-xl p-6 mt-6">
+                        <button type="button" onclick="app.auth.logout()" class="w-full flex justify-center items-center space-x-2 bg-red-500/10 hover:bg-red-500/20 text-danger border border-red-500/20 font-bold py-3 rounded-lg focus-ring transition-colors">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                            <span>Secure Logout</span>
+                        </button>
+                    </div>
                 </div>
             </section>
         </div>
