@@ -58,7 +58,8 @@
         .d-none { display: none !important; }
     </style>
 </head>
-<body class="bg-background text-primary font-sans antialiased min-h-screen flex items-center justify-center p-4 relative overflow-hidden selection:bg-accent selection:text-background">
+<!-- Removed overflow-hidden to allow natural full-page scrolling -->
+<body class="bg-background text-primary font-sans antialiased min-h-screen flex items-center justify-center p-4 relative selection:bg-accent selection:text-background">
 
     <!-- Global Fullscreen Redirect Overlay -->
     <div id="global-overlay" class="fixed inset-0 bg-background z-[100] flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
@@ -67,12 +68,12 @@
         <p class="text-gray-500 mt-2 text-sm">Securing your connection to AfroStory</p>
     </div>
 
-    <!-- Cinematic Background -->
-    <div class="absolute inset-0 z-0 bg-cinematic bg-cover bg-center opacity-30"></div>
-    <div class="absolute inset-0 z-0 bg-gradient-to-t from-background via-background/90 to-background/50"></div>
+    <!-- Cinematic Background (Changed to fixed so it doesn't break when scrolling down) -->
+    <div class="fixed inset-0 z-0 bg-cinematic bg-cover bg-center opacity-30"></div>
+    <div class="fixed inset-0 z-0 bg-gradient-to-t from-background via-background/90 to-background/50"></div>
 
-    <!-- Auth Container -->
-    <div class="w-full max-w-md bg-surface/95 backdrop-blur-md border border-gray-800 rounded-3xl shadow-2xl p-8 relative z-10 max-h-[95vh] overflow-y-auto hide-scrollbar">
+    <!-- Auth Container (Removed max-height and internal overflow limits, added margin for mobile scrolling comfort) -->
+    <div class="w-full max-w-md bg-surface/95 backdrop-blur-md border border-gray-800 rounded-3xl shadow-2xl p-6 sm:p-8 relative z-10 my-8">
         
         <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-1.5 bg-accent rounded-b-full shadow-[0_0_30px_#D4A017] opacity-80"></div>
 
