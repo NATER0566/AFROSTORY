@@ -58,12 +58,9 @@
         
         /* Video Player Specifics */
         video::-webkit-media-controls-enclosure { border-radius: 0; }
-        
-        /* Disabled Buttons */
         button:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
-<!-- Changed h-screen to h-[100dvh] for perfect mobile scrolling -->
 <body class="bg-background text-primary font-sans antialiased h-[100dvh] flex overflow-hidden selection:bg-accent selection:text-background">
 
     <!-- ================= 1. LEFT SIDEBAR (DESKTOP) ================= -->
@@ -149,11 +146,11 @@
             </div>
         </header>
 
-        <!-- SCROLLABLE CONTENT AREA (Increased bottom padding to pb-32 to clear mobile nav completely) -->
+        <!-- SCROLLABLE CONTENT AREA (pb-32 clears the mobile navigation entirely) -->
         <div class="flex-1 overflow-y-auto pb-32 lg:pb-10 relative scroll-smooth" id="main-scroll-area">
             
             <!-- Global Loading State -->
-            <div id="global-loader" class="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center transition-opacity">
+            <div id="global-loader" class="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center transition-opacity">
                 <div class="w-12 h-12 border-4 border-gray-800 border-t-accent rounded-full animate-spin mb-4"></div>
                 <p class="text-gray-400 font-bold tracking-widest text-sm animate-pulse">DECRYPTING VAULT...</p>
                 <div id="global-error-state" class="d-none mt-6 text-center">
@@ -188,7 +185,6 @@
                         <button class="text-accent text-sm font-bold hover:underline focus-ring" onclick="app.nav.go('trending')">View All</button>
                     </div>
                     <div class="flex space-x-4 overflow-x-auto pb-4 hide-scrollbar" id="discover-trending-grid">
-                        <!-- Skeletons -->
                         <div class="min-w-[160px] md:min-w-[200px] h-64 skeleton rounded-xl"></div>
                         <div class="min-w-[160px] md:min-w-[200px] h-64 skeleton rounded-xl"></div>
                         <div class="min-w-[160px] md:min-w-[200px] h-64 skeleton rounded-xl"></div>
@@ -211,10 +207,8 @@
                         <button class="bg-gray-800 text-gray-300 hover:text-white px-4 py-1.5 rounded-full whitespace-nowrap border border-gray-700 focus-ring search-filter-btn" data-filter="movies" onclick="app.api.setSearchFilter('movies')" role="tab">Movies</button>
                     </div>
 
-                    <!-- Search Results Area -->
                     <div id="search-results-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 d-none"></div>
 
-                    <!-- Empty State for Search -->
                     <div class="text-center py-20 text-gray-500" id="search-empty-state">
                         <i data-lucide="film" class="w-16 h-16 mx-auto mb-4 opacity-50"></i>
                         <h3 class="text-xl font-bold text-gray-300">Discover New Stories</h3>
@@ -301,7 +295,6 @@
                         <i data-lucide="play-circle" class="w-20 h-20 text-gray-700"></i>
                     </div>
 
-                    <!-- Custom Back Button Overlay -->
                     <button onclick="app.player.close()" class="absolute top-4 left-4 z-20 text-white bg-black/50 p-2 rounded-full hover:text-accent focus-ring shadow-lg" aria-label="Close Player">
                         <i data-lucide="arrow-left"></i>
                     </button>
@@ -331,7 +324,6 @@
                         
                         <p class="text-gray-300 mb-6 leading-relaxed max-w-3xl" id="series-desc">...</p>
                         
-                        <!-- Episodes List -->
                         <div class="mt-10 border-t border-gray-800 pt-6">
                             <div class="flex justify-between items-center mb-6">
                                 <h3 class="text-xl font-bold">Episodes</h3>
@@ -341,7 +333,6 @@
                             </div>
                             
                             <div class="space-y-4" id="episodes-list">
-                                <!-- Injected Dynamically -->
                                 <div class="skeleton h-24 w-full rounded-xl"></div>
                             </div>
                         </div>
@@ -401,9 +392,8 @@
                             <p class="text-accent font-bold tracking-widest text-sm uppercase" id="studio-brand">LOADING...</p>
                         </div>
                         
-                        <input type="file" id="episode-upload-input" class="d-none" accept="video/mp4,video/x-m4v,video/webm" onchange="app.api.uploadEpisode(event)">
-                        <button id="btn-upload" class="bg-accent text-background font-bold py-2 px-4 md:px-6 rounded-lg hover:bg-yellow-600 transition-colors flex items-center focus-ring" onclick="document.getElementById('episode-upload-input').click()">
-                            <i data-lucide="upload-cloud" class="w-5 h-5 mr-2"></i> <span class="hidden sm:inline">Upload Episode</span><span class="sm:hidden">Upload</span>
+                        <button id="btn-open-upload" class="bg-accent text-background font-bold py-2 px-4 md:px-6 rounded-lg hover:bg-yellow-600 transition-colors flex items-center focus-ring shadow-lg" onclick="app.ui.openUploadModal()">
+                            <i data-lucide="upload-cloud" class="w-5 h-5 mr-2"></i> <span class="hidden sm:inline">Upload Content</span><span class="sm:hidden">Upload</span>
                         </button>
                     </div>
 
@@ -504,7 +494,84 @@
         </button>
     </nav>
 
-    <!-- ================= 4. ENTERPRISE SPA ENGINE ================= -->
+    <!-- ================= ENTERPRISE STUDIO UPLOAD MODAL ================= -->
+    <div id="studio-upload-modal" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex-col items-center justify-center p-4 sm:p-6 opacity-0 pointer-events-none transition-opacity duration-300 flex">
+        <div class="bg-surface border border-gray-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl transform scale-95 transition-transform duration-300 hide-scrollbar" id="studio-upload-content">
+            <div class="sticky top-0 bg-surface/95 backdrop-blur px-6 py-4 border-b border-gray-800 flex justify-between items-center z-10">
+                <h2 class="text-xl font-bold text-white flex items-center"><i data-lucide="video" class="w-5 h-5 mr-2 text-accent"></i> Upload Content</h2>
+                <button type="button" onclick="app.ui.closeUploadModal()" class="text-gray-400 hover:text-white focus-ring rounded-full p-1"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            
+            <form id="studio-upload-form" class="p-6 space-y-5" onsubmit="app.api.submitContentUpload(event)">
+                <!-- Title & Type -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-semibold text-gray-400 mb-1.5">Title</label>
+                        <input type="text" name="title" required class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus-ring" placeholder="e.g. Blood of the Ancestors">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-400 mb-1.5">Content Type</label>
+                        <select name="type" class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus-ring">
+                            <option value="Movie">Movie (Standalone)</option>
+                            <option value="Series">Series Episode</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-400 mb-1.5">Description / Synopsis</label>
+                    <textarea name="description" required rows="3" class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus-ring" placeholder="What is this story about?"></textarea>
+                </div>
+
+                <!-- Monetization -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 border border-gray-800 rounded-xl bg-background/50">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-400 mb-1.5">Monetization</label>
+                        <select name="access" id="upload-access-type" class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus-ring" onchange="app.ui.toggleUploadPrice()">
+                            <option value="Free">Free to Watch</option>
+                            <option value="Ad">Watch Ad to Unlock</option>
+                            <option value="Premium">Premium (Coins)</option>
+                        </select>
+                    </div>
+                    <div id="upload-price-container" class="hidden opacity-0 transition-opacity">
+                        <label class="block text-sm font-semibold text-gray-400 mb-1.5">Coin Price</label>
+                        <input type="number" name="coinCost" id="upload-coin-input" min="1" placeholder="e.g. 10" class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus-ring">
+                    </div>
+                </div>
+
+                <!-- Media Files -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-400 mb-1.5">Cover Image (Thumbnail)</label>
+                        <div class="border-2 border-dashed border-gray-700 rounded-xl p-4 text-center hover:border-accent transition-colors cursor-pointer" onclick="document.getElementById('upload-cover').click()">
+                            <i data-lucide="image" class="w-8 h-8 mx-auto text-gray-500 mb-2"></i>
+                            <span class="text-sm text-gray-400 font-semibold truncate block w-full" id="upload-cover-label">Select Image (JPG/PNG)</span>
+                            <input type="file" id="upload-cover" name="coverImage" accept="image/*" class="d-none" onchange="app.ui.updateFileLabel(this, 'upload-cover-label')" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-400 mb-1.5">Video File (MP4)</label>
+                        <div class="border-2 border-dashed border-gray-700 rounded-xl p-4 text-center hover:border-accent transition-colors cursor-pointer" onclick="document.getElementById('upload-video').click()">
+                            <i data-lucide="video" class="w-8 h-8 mx-auto text-gray-500 mb-2"></i>
+                            <span class="text-sm text-gray-400 font-semibold truncate block w-full" id="upload-video-label">Select Video File</span>
+                            <input type="file" id="upload-video" name="videoFile" accept="video/mp4,video/webm" class="d-none" onchange="app.ui.updateFileLabel(this, 'upload-video-label')" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <div class="pt-4 border-t border-gray-800 flex justify-end space-x-3">
+                    <button type="button" onclick="app.ui.closeUploadModal()" class="px-6 py-2.5 rounded-lg font-bold text-gray-400 hover:text-white hover:bg-gray-800 transition-colors focus-ring">Cancel</button>
+                    <button type="submit" id="btn-submit-upload" class="bg-accent text-background px-8 py-2.5 rounded-lg font-black hover:bg-yellow-600 transition-colors shadow-lg flex items-center focus-ring">
+                        <span id="upload-btn-text">Publish Content</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= 5. ENTERPRISE SPA ENGINE ================= -->
     <script>
         lucide.createIcons();
 
@@ -524,7 +591,6 @@
                 window.addEventListener('online', () => {
                     this.state.isOnline = true;
                     this.toast.fire({ icon: 'success', title: 'Connection Restored', iconColor: '#2ECC71' });
-                    // Retry initialization if it failed previously
                     if (!this.state.user) this.auth.fetchMe();
                 });
                 window.addEventListener('offline', () => {
@@ -536,10 +602,7 @@
             // --- NAVIGATION (HISTORY API) ---
             nav: {
                 go(viewId, pushHistory = true) {
-                    // Cleanup Player if navigating away
-                    if(viewId !== 'player') {
-                        app.player.close();
-                    }
+                    if(viewId !== 'player') app.player.close();
 
                     document.querySelectorAll('.spa-section').forEach(sec => sec.classList.remove('active'));
                     const target = document.getElementById(`view-${viewId}`);
@@ -570,9 +633,7 @@
 
                     if (pushHistory) {
                         let query = `?view=${viewId}`;
-                        if(viewId === 'player' && app.state.content.currentSeriesId) {
-                            query += `&id=${app.state.content.currentSeriesId}`;
-                        }
+                        if(viewId === 'player' && app.state.content.currentSeriesId) query += `&id=${app.state.content.currentSeriesId}`;
                         history.pushState({ view: viewId, id: app.state.content.currentSeriesId }, titles[viewId], query);
                     }
                 },
@@ -583,11 +644,8 @@
                 initListener() {
                     window.addEventListener('popstate', (e) => {
                         if (e.state && e.state.view) {
-                            if(e.state.view === 'player' && e.state.id) {
-                                app.player.openSeries(e.state.id, false);
-                            } else {
-                                this.go(e.state.view, false);
-                            }
+                            if(e.state.view === 'player' && e.state.id) app.player.openSeries(e.state.id, false);
+                            else this.go(e.state.view, false);
                         }
                     });
                     
@@ -595,11 +653,8 @@
                     const initialView = params.get('view') || 'discover';
                     const seriesId = params.get('id');
                     
-                    if (initialView === 'player' && seriesId) {
-                        app.player.openSeries(seriesId, false);
-                    } else {
-                        this.go(initialView, false);
-                    }
+                    if (initialView === 'player' && seriesId) app.player.openSeries(seriesId, false);
+                    else this.go(initialView, false);
                 }
             },
 
@@ -614,7 +669,7 @@
                     };
                     
                     if (options.body && options.body instanceof FormData) {
-                        delete config.headers['Content-Type']; // Let browser set multipart/form-data
+                        delete config.headers['Content-Type']; 
                     }
 
                     for (let i = 0; i <= retries; i++) {
@@ -630,26 +685,30 @@
                             
                             return data;
                         } catch (err) {
-                            if (err.name === 'AbortError') throw err; // Don't retry aborted requests
+                            if (err.name === 'AbortError') throw err;
                             if (i === retries) throw err;
                         }
                     }
                 }
             },
 
-            // --- AUTHENTICATION ---
+            // --- AUTHENTICATION & BOOT ---
             auth: {
                 async fetchMe() {
+                    // Show global lock immediately
                     document.getElementById('global-loader').classList.remove('d-none');
                     document.getElementById('global-error-state').classList.add('d-none');
+                    
                     try {
                         const data = await app.httpClient.request('/auth/me');
                         app.state.user = data;
                         app.ui.hydrateUserUI();
+                        
+                        // Critical fix: Remove loader immediately upon auth success to prevent freezing
                         document.getElementById('global-loader').classList.add('d-none');
                         
-                        // Load Dashboard Data sequentially
-                        await Promise.allSettled([
+                        // Load Dashboard Data in the background (Promises handle their own skeletons)
+                        Promise.allSettled([
                             app.api.fetchDiscoverData(),
                             app.api.fetchWalletData(),
                             app.api.fetchListsData(),
@@ -657,8 +716,9 @@
                             app.api.fetchNotifications()
                         ]);
                     } catch (err) {
+                        if(err.message === 'Session Expired') return; 
+                        // If totally failed, show error, don't remove loader
                         document.getElementById('global-error-state').classList.remove('d-none');
-                        if(err.message === 'Session Expired') return; // Redirect already handled
                         app.toast.fire({ icon: 'error', title: 'Could not connect to AfroStory' });
                     }
                 },
@@ -669,12 +729,9 @@
                         confirmButtonColor: '#E67E22', confirmButtonText: 'Logout'
                     }).then(async (res) => {
                         if(res.isConfirmed) {
-                            try {
-                                document.getElementById('global-loader').classList.remove('d-none');
-                                await app.httpClient.request('/auth/logout', { method: 'POST' });
-                            } finally {
-                                window.location.href = '/index.html'; 
-                            }
+                            document.getElementById('global-loader').classList.remove('d-none');
+                            try { await app.httpClient.request('/auth/logout', { method: 'POST' }); } 
+                            finally { window.location.href = '/index.html'; }
                         }
                     });
                 }
@@ -689,7 +746,6 @@
                             app.httpClient.request('/series/trending')
                         ]);
                         
-                        // Hero
                         if (heroRes && heroRes._id) {
                             app.state.content.hero = heroRes;
                             document.getElementById('hero-skeleton').classList.add('d-none');
@@ -702,8 +758,6 @@
                                 document.getElementById(id).classList.remove('opacity-0');
                             });
                         }
-
-                        // Trending
                         app.ui.renderGrid('discover-trending-grid', trendingRes, false);
                         app.ui.renderGrid('trending-grid', trendingRes, true, "No trending stories right now.");
                     } catch (err) {
@@ -714,12 +768,9 @@
                 async fetchWalletData() {
                     try {
                         const wallet = await app.httpClient.request('/wallet');
-                        const balance = wallet.storyCoins || "0.00";
-                        const earnings = wallet.lockedEarnings || "0.00";
-                        
-                        document.getElementById('ui-wallet-balance').innerText = app.ui.escapeHTML(balance.toString());
-                        document.getElementById('wallet-coins-page').innerText = app.ui.escapeHTML(balance.toString());
-                        document.getElementById('wallet-earnings-page').innerText = app.ui.escapeHTML(earnings.toString());
+                        document.getElementById('ui-wallet-balance').innerText = app.ui.escapeHTML((wallet.storyCoins || "0.00").toString());
+                        document.getElementById('wallet-coins-page').innerText = app.ui.escapeHTML((wallet.storyCoins || "0.00").toString());
+                        document.getElementById('wallet-earnings-page').innerText = app.ui.escapeHTML((wallet.lockedEarnings || "0.00").toString());
 
                         const history = await app.httpClient.request('/wallet/history');
                         app.state.content.txHistory = history || [];
@@ -748,9 +799,7 @@
                             const badge = document.getElementById('ui-notif-badge');
                             badge.innerText = unreadCount;
                             badge.classList.remove('d-none');
-                        } else {
-                            document.getElementById('ui-notif-badge').classList.add('d-none');
-                        }
+                        } else document.getElementById('ui-notif-badge').classList.add('d-none');
 
                         if(notifs.length === 0) {
                             notifContainer.innerHTML = app.ui.getEmptyStateHtml("No New Alerts", "You are all caught up.", "bell");
@@ -778,18 +827,14 @@
                     app.ui.setLoading(btn, true, 'Marking...');
                     try {
                         await app.httpClient.request('/notifications/read', { method: 'POST' });
-                        // Instant visual update
                         document.getElementById('ui-notif-badge').classList.add('d-none');
                         document.querySelectorAll('.notif-item.border-l-accent').forEach(el => {
                             el.classList.remove('border-l-4', 'border-l-accent');
                             el.classList.add('opacity-70');
                         });
                         app.toast.fire({ icon: 'success', title: 'Marked as read' });
-                    } catch (err) {
-                        app.toast.fire({ icon: 'error', title: 'Failed to update' });
-                    } finally {
-                        app.ui.setLoading(btn, false, 'Mark all as read');
-                    }
+                    } catch (err) { app.toast.fire({ icon: 'error', title: 'Failed to update' }); } 
+                    finally { app.ui.setLoading(btn, false, 'Mark all as read'); }
                 },
 
                 async fetchStudioStats() {
@@ -862,82 +907,82 @@
 
                     app.ui.setLoading(btn, true, 'Saving...');
                     try {
-                        const res = await app.httpClient.request('/profile/update', {
-                            method: 'POST',
-                            body: JSON.stringify({ username, email, pin })
-                        });
-                        
+                        const res = await app.httpClient.request('/profile/update', { method: 'POST', body: JSON.stringify({ username, email, pin }) });
                         app.state.user = { ...app.state.user, ...res.user };
                         app.ui.hydrateUserUI();
                         app.toast.fire({ icon: 'success', title: 'Profile Updated' });
                         form.pin.value = ''; 
-                    } catch (err) {
-                        app.toast.fire({ icon: 'error', title: err.message });
-                    } finally {
-                        app.ui.setLoading(btn, false, 'Save Changes');
-                    }
+                    } catch (err) { app.toast.fire({ icon: 'error', title: err.message }); } 
+                    finally { app.ui.setLoading(btn, false, 'Save Changes'); }
                 },
                 
                 async uploadAvatar(e) {
                     const file = e.target.files[0];
                     if(!file) return;
-                    
-                    // Validation
                     if (file.size > 5 * 1024 * 1024) return app.toast.fire({ icon: 'error', title: 'Image must be less than 5MB' });
-                    if (!file.type.startsWith('image/')) return app.toast.fire({ icon: 'error', title: 'Invalid image format' });
-
+                    
                     const btn = document.getElementById('btn-change-avatar');
                     app.ui.setLoading(btn, true, 'Uploading...');
                     try {
                         const formData = new FormData();
                         formData.append('avatar', file);
-                        
-                        const res = await app.httpClient.request('/profile/avatar', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        
+                        const res = await app.httpClient.request('/profile/avatar', { method: 'POST', body: formData });
                         app.state.user.avatarUrl = res.avatarUrl;
                         app.ui.hydrateUserUI();
                         app.toast.fire({ icon: 'success', title: 'Avatar Updated' });
-                    } catch (err) {
-                        app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' });
-                    } finally {
-                        app.ui.setLoading(btn, false, 'Change Avatar');
-                        e.target.value = ''; // Reset input
-                    }
+                    } catch (err) { app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' }); } 
+                    finally { app.ui.setLoading(btn, false, 'Change Avatar'); e.target.value = ''; }
                 },
 
-                async uploadEpisode(e) {
-                    const file = e.target.files[0];
-                    if(!file) return;
+                // Studio Comprehensive Upload API
+                async submitContentUpload(e) {
+                    e.preventDefault();
+                    const form = e.target;
+                    const btn = document.getElementById('btn-submit-upload');
+                    
+                    const title = form.title.value.trim();
+                    const type = form.type.value;
+                    const description = form.description.value.trim();
+                    const access = form.access.value;
+                    const coinCost = form.coinCost.value;
+                    const coverImage = form.coverImage.files[0];
+                    const videoFile = form.videoFile.files[0];
 
-                    // Validation
-                    if (file.size > 500 * 1024 * 1024) return app.toast.fire({ icon: 'error', title: 'Video must be less than 500MB' });
-                    if (!file.type.startsWith('video/')) return app.toast.fire({ icon: 'error', title: 'Invalid video format' });
+                    if (!coverImage || !videoFile) return app.toast.fire({ icon: 'error', title: 'Both Image and Video files are required' });
+                    if (access === 'Premium' && (!coinCost || coinCost < 1)) return app.toast.fire({ icon: 'error', title: 'Set a valid coin price' });
 
-                    const btn = document.getElementById('btn-upload');
-                    app.ui.setLoading(btn, true, 'Uploading...');
+                    btn.disabled = true;
+                    btn.querySelector('.btn-content').classList.add('opacity-0');
+                    btn.querySelector('.btn-spinner').classList.remove('hidden');
+
                     try {
                         const formData = new FormData();
-                        formData.append('video', file);
+                        formData.append('title', title);
+                        formData.append('type', type);
+                        formData.append('description', description);
+                        formData.append('access', access);
+                        if(access === 'Premium') formData.append('coinCost', coinCost);
+                        formData.append('coverImage', coverImage);
+                        formData.append('videoFile', videoFile);
                         
-                        await app.httpClient.request('/studio/upload', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        app.toast.fire({ icon: 'success', title: 'Episode processing started' });
+                        await app.httpClient.request('/studio/upload', { method: 'POST', body: formData });
+                        
+                        app.toast.fire({ icon: 'success', title: 'Content published successfully!' });
+                        app.ui.closeUploadModal();
+                        form.reset();
+                        document.getElementById('upload-cover-label').innerText = 'Select Image (JPG/PNG)';
+                        document.getElementById('upload-video-label').innerText = 'Select Video File';
                         this.fetchStudioStats();
                     } catch (err) {
                         app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' });
                     } finally {
-                        app.ui.setLoading(btn, false, '<i data-lucide="upload-cloud" class="w-5 h-5 mr-2"></i> <span class="hidden sm:inline">Upload Episode</span><span class="sm:hidden">Upload</span>');
-                        lucide.createIcons();
-                        e.target.value = ''; // Reset input
+                        btn.disabled = false;
+                        btn.querySelector('.btn-content').classList.remove('opacity-0');
+                        btn.querySelector('.btn-spinner').classList.add('hidden');
                     }
                 },
 
-                // Finance
+                // Finance & Others
                 async fundWallet(btn) {
                     try {
                         const { value: amount } = await Swal.fire({
@@ -947,26 +992,18 @@
                         });
                         if (amount) {
                             app.ui.setLoading(btn, true, 'Connecting Paystack...');
-                            const res = await app.httpClient.request('/wallet/fund', {
-                                method: 'POST', body: JSON.stringify({ amount })
-                            });
+                            const res = await app.httpClient.request('/wallet/fund', { method: 'POST', body: JSON.stringify({ amount }) });
                             if (res.authorization_url) window.location.href = res.authorization_url;
                         }
-                    } catch (err) {
-                        app.toast.fire({ icon: 'error', title: err.message });
-                    } finally {
-                        app.ui.setLoading(btn, false, 'Fund via Paystack');
-                    }
+                    } catch (err) { app.toast.fire({ icon: 'error', title: err.message }); } 
+                    finally { app.ui.setLoading(btn, false, 'Fund via Paystack'); }
                 },
 
                 async withdrawFunds(btn) {
                     try {
                         const { value, isConfirmed } = await Swal.fire({
                             title: 'Withdraw Earnings', 
-                            html: `
-                                <input type="number" id="w-amount" class="swal2-input bg-surface text-white border-gray-700 placeholder-gray-500" placeholder="Amount (₦)">
-                                <input type="password" id="w-pin" class="swal2-input bg-surface text-white border-gray-700 placeholder-gray-500" placeholder="4-Digit PIN" maxlength="4">
-                            `,
+                            html: `<input type="number" id="w-amount" class="swal2-input bg-surface text-white border-gray-700 placeholder-gray-500" placeholder="Amount (₦)"><input type="password" id="w-pin" class="swal2-input bg-surface text-white border-gray-700 placeholder-gray-500" placeholder="4-Digit PIN" maxlength="4">`,
                             showCancelButton: true, background: '#1B1B1B', color: '#F5F5F5', confirmButtonColor: '#E67E22',
                             preConfirm: () => {
                                 const amount = document.getElementById('w-amount').value;
@@ -978,26 +1015,18 @@
 
                         if (isConfirmed && value) {
                             app.ui.setLoading(btn, true, 'Processing...');
-                            await app.httpClient.request('/wallet/withdraw', {
-                                method: 'POST', body: JSON.stringify(value)
-                            });
+                            await app.httpClient.request('/wallet/withdraw', { method: 'POST', body: JSON.stringify(value) });
                             app.toast.fire({ icon: 'success', title: 'Withdrawal Initiated' });
                             this.fetchWalletData();
                         }
-                    } catch (err) {
-                        app.toast.fire({ icon: 'error', title: err.message });
-                    } finally {
-                        app.ui.setLoading(btn, false, 'Withdraw to Bank');
-                    }
+                    } catch (err) { app.toast.fire({ icon: 'error', title: err.message }); } 
+                    finally { app.ui.setLoading(btn, false, 'Withdraw to Bank'); }
                 },
 
-                // Social Actions
                 async toggleFavorite(seriesId, btn) {
                     app.ui.setLoading(btn, true, '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>');
                     try {
-                        await app.httpClient.request('/favorites/toggle', {
-                            method: 'POST', body: JSON.stringify({ seriesId })
-                        });
+                        await app.httpClient.request('/favorites/toggle', { method: 'POST', body: JSON.stringify({ seriesId }) });
                         app.toast.fire({ icon: 'success', title: 'Library Updated' });
                         this.fetchListsData();
                     } catch(err) { app.toast.fire({ icon: 'error', title: err.message }); }
@@ -1006,9 +1035,7 @@
                 async likeSeries(seriesId, btn) {
                     app.ui.setLoading(btn, true, '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>');
                     try {
-                        await app.httpClient.request('/series/like', {
-                            method: 'POST', body: JSON.stringify({ seriesId })
-                        });
+                        await app.httpClient.request('/series/like', { method: 'POST', body: JSON.stringify({ seriesId }) });
                         app.toast.fire({ icon: 'success', title: 'Liked!' });
                     } catch(err) { app.toast.fire({ icon: 'error', title: err.message }); }
                     finally { app.ui.setLoading(btn, false, '<i data-lucide="thumbs-up"></i>'); lucide.createIcons(); }
@@ -1018,9 +1045,7 @@
                         const url = `${window.location.origin}/app.html?view=player&id=${seriesId}`;
                         await navigator.clipboard.writeText(url);
                         app.toast.fire({ icon: 'success', title: 'Link copied to clipboard' });
-                    } catch(err) {
-                        app.toast.fire({ icon: 'error', title: 'Failed to copy link' });
-                    }
+                    } catch(err) { app.toast.fire({ icon: 'error', title: 'Failed to copy link' }); }
                 },
                 
                 async togglePushNotifications(btn) {
@@ -1049,19 +1074,14 @@
 
                 init() {
                     this.videoElem = document.getElementById('hls-player');
-                    
-                    // Throttled Progress tracking (Every 15s max)
                     this.videoElem.addEventListener('timeupdate', () => {
                         if (!this.currentEpisodeId || this.videoElem.paused) return;
-                        
                         const currentTime = this.videoElem.currentTime;
                         if (Math.abs(currentTime - this.lastSavedTime) >= 15) {
                             this.saveProgress(this.currentEpisodeId, currentTime);
                             this.lastSavedTime = currentTime;
                         }
                     });
-
-                    // Cleanup when ended
                     this.videoElem.addEventListener('ended', () => {
                         if (this.currentEpisodeId) this.saveProgress(this.currentEpisodeId, this.videoElem.currentTime, true);
                     });
@@ -1070,11 +1090,8 @@
                 saveProgress(episodeId, position, completed = false) {
                     if(this.saveTimeout) clearTimeout(this.saveTimeout);
                     this.saveTimeout = setTimeout(() => {
-                        app.httpClient.request('/history/progress', {
-                            method: 'POST',
-                            body: JSON.stringify({ episodeId, position, completed })
-                        }).catch(() => {}); // silent fail
-                    }, 1000); // 1s debounce
+                        app.httpClient.request('/history/progress', { method: 'POST', body: JSON.stringify({ episodeId, position, completed }) }).catch(() => {});
+                    }, 1000); 
                 },
 
                 async openSeries(seriesId, pushHistory = true) {
@@ -1099,7 +1116,6 @@
                         document.getElementById('series-meta-episodes').innerText = `${app.ui.escapeHTML((data.totalEpisodes || 0).toString())} Episodes`;
                         document.getElementById('series-desc').innerText = app.ui.escapeHTML(data.description || '');
                         
-                        // Populate Season Selector dynamically
                         const seasonSelect = document.getElementById('season-selector');
                         if (data.seasons && data.seasons.length > 0) {
                             seasonSelect.innerHTML = data.seasons.map((s, i) => `<option value="${s.id || i+1}">${app.ui.escapeHTML(s.name || 'Season ' + (i+1))}</option>`).join('');
@@ -1163,8 +1179,6 @@
                     this.currentEpisodeId = episodeId;
                     this.lastSavedTime = startTime;
                     document.getElementById('video-overlay').classList.add('d-none');
-                    
-                    // Secure URL simulation (assuming backend returns signed URL)
                     const secureUrl = mediaUrl;
 
                     if (Hls.isSupported() && secureUrl.includes('.m3u8')) {
@@ -1179,41 +1193,24 @@
                         this.hls.on(Hls.Events.ERROR, (event, data) => {
                             if (data.fatal) {
                                 switch (data.type) {
-                                    case Hls.ErrorTypes.NETWORK_ERROR:
-                                        this.hls.startLoad();
-                                        break;
-                                    case Hls.ErrorTypes.MEDIA_ERROR:
-                                        this.hls.recoverMediaError();
-                                        break;
-                                    default:
-                                        this.hls.destroy();
-                                        break;
+                                    case Hls.ErrorTypes.NETWORK_ERROR: this.hls.startLoad(); break;
+                                    case Hls.ErrorTypes.MEDIA_ERROR: this.hls.recoverMediaError(); break;
+                                    default: this.hls.destroy(); break;
                                 }
                             }
                         });
                     } else {
-                        // Native fallback (Safari) or standard mp4
                         this.videoElem.src = secureUrl;
                         this.videoElem.currentTime = startTime;
                         this.videoElem.play().catch(e => console.log('Autoplay blocked', e));
                     }
-                    
                     this.videoElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 },
 
                 close() {
-                    if (this.currentEpisodeId) {
-                        this.saveProgress(this.currentEpisodeId, this.videoElem.currentTime);
-                    }
-                    if (this.videoElem) {
-                        this.videoElem.pause();
-                        this.videoElem.src = "";
-                        this.videoElem.removeAttribute('src');
-                    }
-                    if (this.hls) {
-                        this.hls.destroy();
-                        this.hls = null;
-                    }
+                    if (this.currentEpisodeId) this.saveProgress(this.currentEpisodeId, this.videoElem.currentTime);
+                    if (this.videoElem) { this.videoElem.pause(); this.videoElem.src = ""; this.videoElem.removeAttribute('src'); }
+                    if (this.hls) { this.hls.destroy(); this.hls = null; }
                     document.getElementById('video-overlay').classList.remove('d-none');
                     this.currentEpisodeId = null;
                     this.lastSavedTime = 0;
@@ -1246,25 +1243,18 @@
                     try {
                         if (method === 'ad') {
                             app.toast.fire({ icon: 'info', title: 'Playing Rewarded Ad...' });
-                            // Simulate Ad completion wait before API call
                             await new Promise(res => setTimeout(res, 2000));
                         }
                         
-                        await app.httpClient.request(`/episodes/unlock/${method}`, {
-                            method: 'POST', body: JSON.stringify({ episodeId })
-                        });
-                        
+                        await app.httpClient.request(`/episodes/unlock/${method}`, { method: 'POST', body: JSON.stringify({ episodeId }) });
                         app.toast.fire({ icon: 'success', title: 'Episode Unlocked!' });
-                        // Refresh wallet & episodes
                         app.api.fetchWalletData();
                         app.player.loadSeason(document.getElementById('season-selector').value);
-                    } catch (err) {
-                        app.toast.fire({ icon: 'error', title: err.message });
-                    }
+                    } catch (err) { app.toast.fire({ icon: 'error', title: err.message }); }
                 }
             },
 
-            // --- UI HELPERS ---
+            // --- UI HELPERS & MODALS ---
             ui: {
                 escapeHTML(str) {
                     if (typeof str !== 'string') return str;
@@ -1276,11 +1266,8 @@
                 setLoading(btn, isLoading, originalHtml) {
                     if (!btn) return;
                     btn.disabled = isLoading;
-                    if (isLoading) {
-                        btn.innerHTML = `<span class="animate-pulse">${originalHtml}</span>`;
-                    } else {
-                        btn.innerHTML = originalHtml;
-                    }
+                    if (isLoading) btn.innerHTML = `<span class="animate-pulse">${originalHtml}</span>`;
+                    else btn.innerHTML = originalHtml;
                 },
 
                 hydrateUserUI() {
@@ -1296,7 +1283,6 @@
                         document.getElementById('profile-avatar-img').src = u.avatarUrl;
                         document.getElementById('profile-avatar-img').classList.remove('d-none');
                         document.getElementById('profile-avatar-fallback').classList.add('d-none');
-                        
                         document.getElementById('ui-avatar').src = u.avatarUrl;
                         document.getElementById('ui-avatar').classList.remove('d-none');
                         document.getElementById('ui-avatar-fallback').classList.add('d-none');
@@ -1305,10 +1291,13 @@
                         document.getElementById('ui-avatar-fallback').innerText = init;
                     }
 
-                    // Headers & Badges
+                    // Headers & Badges & Fallbacks
                     document.getElementById('ui-username').innerText = `@${app.ui.escapeHTML(u.username)}`;
                     document.getElementById('ui-badge').innerText = app.ui.escapeHTML(u.role || 'Member');
-                    document.getElementById('studio-brand').innerText = app.ui.escapeHTML(u.brandName || (u.username + ' STUDIO'));
+                    
+                    // Fix for "UNDEFINED STUDIO"
+                    const defaultStudioName = u.username ? `${app.ui.escapeHTML(u.username).toUpperCase()} STUDIO` : 'CREATOR STUDIO';
+                    document.getElementById('studio-brand').innerText = u.brandName ? app.ui.escapeHTML(u.brandName) : defaultStudioName;
                 },
 
                 getEmptyStateHtml(title, desc, icon = "film") {
@@ -1362,11 +1351,9 @@
                     const btns = document.querySelectorAll('#tx-filters button');
                     btns.forEach(b => {
                         if(b.innerText.toUpperCase() === type || (type === 'ALL' && b.innerText === 'All') || (type === 'CREDIT' && b.innerText === 'Incoming') || (type === 'DEBIT' && b.innerText === 'Outgoing')){
-                            b.classList.replace('text-gray-500', 'text-accent');
-                            b.classList.add('font-bold');
+                            b.classList.replace('text-gray-500', 'text-accent'); b.classList.add('font-bold');
                         } else {
-                            b.classList.replace('text-accent', 'text-gray-500');
-                            b.classList.remove('font-bold');
+                            b.classList.replace('text-accent', 'text-gray-500'); b.classList.remove('font-bold');
                         }
                     });
 
@@ -1383,7 +1370,7 @@
                         return;
                     }
                     let html = '<div class="divide-y divide-gray-800">';
-                    history.slice(0, 50).forEach(tx => { // Simple pagination/limit
+                    history.slice(0, 50).forEach(tx => { 
                         const isCredit = tx.type === 'FUND' || tx.type === 'AD_REWARD' || tx.type === 'PAYOUT_CREDIT';
                         const color = isCredit ? 'text-success' : 'text-danger';
                         const sign = isCredit ? '+' : '-';
@@ -1406,6 +1393,52 @@
                     html += '</div>';
                     container.innerHTML = html;
                     lucide.createIcons();
+                },
+
+                // Studio Modal Logic
+                openUploadModal() {
+                    const modal = document.getElementById('studio-upload-modal');
+                    const content = document.getElementById('studio-upload-content');
+                    modal.classList.remove('hidden', 'pointer-events-none');
+                    // Slight delay to allow display:flex to render before changing opacity for animation
+                    setTimeout(() => {
+                        modal.classList.remove('opacity-0');
+                        content.classList.remove('scale-95');
+                        content.classList.add('scale-100');
+                    }, 10);
+                },
+                closeUploadModal() {
+                    const modal = document.getElementById('studio-upload-modal');
+                    const content = document.getElementById('studio-upload-content');
+                    modal.classList.add('opacity-0');
+                    content.classList.remove('scale-100');
+                    content.classList.add('scale-95');
+                    setTimeout(() => {
+                        modal.classList.add('hidden', 'pointer-events-none');
+                        document.getElementById('studio-upload-form').reset();
+                        document.getElementById('upload-price-container').classList.add('hidden', 'opacity-0');
+                        document.getElementById('upload-cover-label').innerText = 'Select Image (JPG/PNG)';
+                        document.getElementById('upload-video-label').innerText = 'Select Video File';
+                    }, 300);
+                },
+                toggleUploadPrice() {
+                    const type = document.getElementById('upload-access-type').value;
+                    const container = document.getElementById('upload-price-container');
+                    const input = document.getElementById('upload-coin-input');
+                    if(type === 'Premium') {
+                        container.classList.remove('hidden');
+                        setTimeout(() => container.classList.remove('opacity-0'), 10);
+                        input.required = true;
+                    } else {
+                        container.classList.add('opacity-0');
+                        setTimeout(() => container.classList.add('hidden'), 300);
+                        input.required = false;
+                        input.value = '';
+                    }
+                },
+                updateFileLabel(input, labelId) {
+                    const label = document.getElementById(labelId);
+                    if(input.files && input.files[0]) label.innerText = input.files[0].name;
                 }
             },
 
@@ -1429,7 +1462,6 @@
                             return;
                         }
 
-                        // Show Loading UI
                         emptyState.classList.remove('d-none');
                         resultsGrid.classList.add('d-none');
                         emptyState.innerHTML = `<div class="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p>Searching...</p>`;
@@ -1438,7 +1470,7 @@
                             if(this.controller) this.controller.abort();
                             this.controller = new AbortController();
                             app.api.executeSearch(val, this.controller.signal);
-                        }, 500); // 500ms debounce
+                        }, 500);
                     });
                 }
             },
