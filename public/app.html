@@ -3,18 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | AfroStory</title>
+    <title>AfroStory | Premium Streaming</title>
     
-    <!-- Google Fonts: Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     
-    <!-- SweetAlert2 for Enterprise Popups -->
+    <!-- Enterprise Popups & HLS Video Player -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
@@ -24,7 +27,8 @@
                         primary: '#F5F5F5',
                         accent: '#D4A017',
                         action: '#E67E22',
-                        success: '#2ECC71'
+                        success: '#2ECC71',
+                        danger: '#E74C3C'
                     }
                 }
             }
@@ -32,170 +36,1415 @@
     </script>
 
     <style>
-        .fade-in { animation: fadeIn 0.4s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        ::-webkit-scrollbar { width: 8px; }
+        /* SPA & Animations */
+        .spa-section { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .spa-section.active { display: block; opacity: 1; animation: slideUp 0.4s ease-out forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #111111; }
-        ::-webkit-scrollbar-thumb { background: #1B1B1B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #D4A017; }
+
+        /* Skeleton Loading pulse */
+        .skeleton { background: linear-gradient(90deg, #1B1B1B 25%, #2a2a2a 50%, #1B1B1B 75%); background-size: 200% 100%; animation: loading 1.5s infinite; border-radius: 0.5rem; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+        /* Utilities */
+        .d-none { display: none !important; }
+        .focus-ring:focus-visible { outline: none; box-shadow: 0 0 0 2px #D4A017; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* Video Player Specifics */
+        video::-webkit-media-controls-enclosure { border-radius: 0; }
+        
+        /* Disabled Buttons */
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
-<body class="bg-background text-primary font-sans antialiased h-screen flex overflow-hidden">
+<body class="bg-background text-primary font-sans antialiased h-screen flex overflow-hidden selection:bg-accent selection:text-background">
 
-    <!-- ================= SIDEBAR ================= -->
-    <aside class="w-64 bg-surface border-r border-gray-800 flex flex-col justify-between hidden md:flex">
+    <!-- ================= 1. LEFT SIDEBAR (DESKTOP) ================= -->
+    <aside class="w-64 bg-surface border-r border-gray-800 flex-col justify-between hidden lg:flex z-30 h-full overflow-y-auto" aria-label="Sidebar Navigation">
         <div>
-            <!-- Logo -->
-            <div class="h-20 flex items-center justify-center border-b border-gray-800 shadow-[0_4px_30px_rgba(212,160,23,0.05)]">
-                <h1 class="text-2xl font-bold tracking-wider text-primary">AFRO<span class="text-accent">STORY</span></h1>
+            <div class="h-20 flex items-center px-8 border-b border-gray-800 sticky top-0 bg-surface z-10">
+                <h1 class="text-2xl font-black tracking-widest text-primary cursor-pointer focus-ring" tabindex="0" onclick="app.nav.go('discover')" aria-label="AfroStory Home">AFRO<span class="text-accent">STORY</span></h1>
             </div>
             
-            <!-- Navigation Links -->
-            <nav class="p-4 space-y-2 mt-4">
-                <a href="#" class="flex items-center space-x-3 bg-gray-800/50 text-accent px-4 py-3 rounded-lg border border-gray-700 transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                    <span class="font-semibold">Dashboard</span>
-                </a>
-                <a href="#" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-3 rounded-lg transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                    <span class="font-semibold">My Stories</span>
-                </a>
-                <a href="#" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-3 rounded-lg transition-colors">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
-                    <span class="font-semibold">Wallet</span>
-                </a>
+            <nav class="p-4 space-y-1 mt-2" id="desktop-nav" role="navigation">
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-4 mt-4" aria-hidden="true">Menu</p>
+                <button onclick="app.nav.go('discover')" data-target="discover" class="nav-btn w-full flex items-center space-x-3 bg-gray-800/50 text-accent px-4 py-2.5 rounded-lg transition-all focus-ring" tabindex="0">
+                    <i data-lucide="compass" class="w-5 h-5"></i><span class="font-semibold text-sm">Discover</span>
+                </button>
+                <button onclick="app.nav.go('search')" data-target="search" class="nav-btn w-full flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-2.5 rounded-lg transition-all focus-ring" tabindex="0">
+                    <i data-lucide="search" class="w-5 h-5"></i><span class="font-semibold text-sm">Search</span>
+                </button>
+                <button onclick="app.nav.go('trending')" data-target="trending" class="nav-btn w-full flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-2.5 rounded-lg transition-all focus-ring" tabindex="0">
+                    <i data-lucide="trending-up" class="w-5 h-5"></i><span class="font-semibold text-sm">Trending</span>
+                </button>
+
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-4 mt-6" aria-hidden="true">My Library</p>
+                <button onclick="app.nav.go('continue')" data-target="continue" class="nav-btn w-full flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-2.5 rounded-lg transition-all focus-ring" tabindex="0">
+                    <i data-lucide="play-circle" class="w-5 h-5"></i><span class="font-semibold text-sm">Continue Watching</span>
+                </button>
+                <button onclick="app.nav.go('favorites')" data-target="favorites" class="nav-btn w-full flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-2.5 rounded-lg transition-all focus-ring" tabindex="0">
+                    <i data-lucide="heart" class="w-5 h-5"></i><span class="font-semibold text-sm">Favorites</span>
+                </button>
+                <button onclick="app.nav.go('wallet')" data-target="wallet" class="nav-btn w-full flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-2.5 rounded-lg transition-all focus-ring" tabindex="0">
+                    <i data-lucide="wallet" class="w-5 h-5"></i><span class="font-semibold text-sm">Wallet & Rewards</span>
+                </button>
+
+                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-4 mt-6" aria-hidden="true">Creator</p>
+                <button onclick="app.nav.go('studio')" data-target="studio" class="nav-btn w-full flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-2.5 rounded-lg transition-all focus-ring" tabindex="0">
+                    <i data-lucide="video" class="w-5 h-5"></i><span class="font-semibold text-sm">Studio Dashboard</span>
+                </button>
             </nav>
         </div>
 
-        <!-- Logout Section -->
-        <div class="p-4 border-t border-gray-800">
-            <button onclick="handleLogout()" class="w-full flex items-center justify-center space-x-2 bg-red-900/20 text-red-400 hover:bg-red-900/40 hover:text-red-300 px-4 py-3 rounded-lg transition-colors">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                <span class="font-semibold">Secure Logout</span>
+        <div class="p-4 border-t border-gray-800 space-y-2 bg-surface sticky bottom-0">
+            <button onclick="app.nav.go('settings')" class="w-full flex items-center space-x-3 text-gray-400 hover:text-white px-4 py-2 rounded-lg transition-all focus-ring" tabindex="0">
+                <i data-lucide="settings" class="w-5 h-5"></i><span class="font-semibold text-sm">Settings</span>
+            </button>
+            <button onclick="app.auth.logout()" class="w-full flex items-center space-x-3 text-danger hover:bg-red-900/20 px-4 py-2 rounded-lg transition-all focus-ring" tabindex="0">
+                <i data-lucide="log-out" class="w-5 h-5"></i><span class="font-semibold text-sm">Secure Logout</span>
             </button>
         </div>
     </aside>
 
-    <!-- ================= MAIN CONTENT ================= -->
-    <main class="flex-1 flex flex-col bg-background overflow-y-auto">
+    <!-- ================= 2. MAIN APP CONTAINER ================= -->
+    <main class="flex-1 flex flex-col relative h-full overflow-hidden">
         
-        <!-- Top Navigation -->
-        <header class="h-20 bg-surface border-b border-gray-800 flex items-center justify-between px-8 sticky top-0 z-10">
-            <h2 class="text-xl font-bold text-primary">Overview</h2>
-            
+        <!-- HEADER (GLOBAL) -->
+        <header class="h-20 bg-surface/90 backdrop-blur-md border-b border-gray-800 flex items-center justify-between px-4 md:px-8 z-20 shrink-0">
             <div class="flex items-center space-x-4">
-                <div class="w-10 h-10 rounded-full bg-accent text-background flex items-center justify-center font-bold text-lg border-2 border-action shadow-[0_0_15px_rgba(212,160,23,0.3)]">
-                    <span id="avatar-initial">A</span>
+                <h2 id="header-title" class="text-xl font-bold text-primary hidden md:block">Discover</h2>
+                <div class="lg:hidden cursor-pointer" onclick="app.nav.go('discover')">
+                    <h1 class="text-xl font-black tracking-widest text-primary">AFRO<span class="text-accent">STORY</span></h1>
                 </div>
-                <div class="hidden md:block text-sm">
-                    <p class="text-gray-300 font-semibold" id="display-username">Loading User...</p>
-                    <p class="text-xs text-success">Online & Secure</p>
-                </div>
+            </div>
+            
+            <div class="flex items-center space-x-5">
+                <button onclick="app.nav.go('notifications')" class="relative text-gray-400 hover:text-white transition-colors focus-ring rounded-full p-1" aria-label="Notifications" tabindex="0">
+                    <i data-lucide="bell" class="w-6 h-6"></i>
+                    <span id="ui-notif-badge" class="absolute -top-1 -right-1 bg-action text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center d-none">0</span>
+                </button>
+                
+                <button onclick="app.nav.go('wallet')" class="hidden md:flex items-center space-x-3 bg-gray-900 border border-gray-700 px-4 py-1.5 rounded-full hover:border-accent transition-all focus-ring" aria-label="Wallet">
+                    <i data-lucide="coins" class="w-4 h-4 text-accent"></i>
+                    <span class="font-bold text-sm" id="ui-wallet-balance">--</span>
+                </button>
+
+                <button onclick="app.nav.go('profile')" class="flex items-center space-x-3 focus-ring rounded-full text-left" aria-label="Profile">
+                    <div class="hidden sm:block">
+                        <p class="text-sm font-bold leading-none" id="ui-username">Loading...</p>
+                        <p class="text-[10px] text-success uppercase tracking-wider font-bold mt-1" id="ui-badge">Loading</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-gray-800 border-2 border-accent flex items-center justify-center overflow-hidden">
+                        <img id="ui-avatar" src="" alt="Avatar" class="w-full h-full object-cover d-none" onerror="this.src='https://ui-avatars.com/api/?name=User&background=D4A017&color=111'">
+                        <span id="ui-avatar-fallback" class="font-bold text-accent"></span>
+                    </div>
+                </button>
             </div>
         </header>
 
-        <!-- Dashboard Body -->
-        <div class="p-8 fade-in">
-            <!-- Welcome Banner -->
-            <div class="bg-surface border border-gray-800 rounded-2xl p-8 mb-8 relative overflow-hidden shadow-xl">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-accent rounded-full filter blur-[100px] opacity-10"></div>
-                <h3 class="text-3xl font-bold mb-2 text-primary">Welcome to your vault, <span id="welcome-name" class="text-accent">Creator</span>.</h3>
-                <p class="text-gray-400 max-w-2xl text-lg">Your engine is live, fully connected to MongoDB, and strictly secured. Ready to build the future of digital storytelling.</p>
+        <!-- SCROLLABLE CONTENT AREA -->
+        <div class="flex-1 overflow-y-auto pb-20 lg:pb-0 relative" id="main-scroll-area">
+            
+            <!-- Global Loading State -->
+            <div id="global-loader" class="absolute inset-0 bg-background/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center transition-opacity">
+                <div class="w-12 h-12 border-4 border-gray-800 border-t-accent rounded-full animate-spin mb-4"></div>
+                <p class="text-gray-400 font-bold tracking-widest text-sm animate-pulse">DECRYPTING VAULT...</p>
+                <div id="global-error-state" class="d-none mt-6 text-center">
+                    <p class="text-danger mb-4 font-semibold">Network Error. Failed to connect.</p>
+                    <button onclick="app.init()" class="bg-accent text-background px-6 py-2 rounded-lg font-bold hover:bg-yellow-600 transition-colors">Retry Connection</button>
+                </div>
             </div>
 
-            <!-- Stats Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <!-- Stat Card 1 -->
-                <div class="bg-surface border border-gray-800 p-6 rounded-xl shadow-lg transform transition-transform hover:-translate-y-1">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-gray-400 font-semibold">Total Stories</h4>
-                        <div class="bg-blue-900/30 p-2 rounded-lg text-blue-400">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+            <!-- ================= VIEW: DISCOVER ================= -->
+            <section id="view-discover" class="spa-section p-4 md:p-8">
+                <!-- Hero Banner -->
+                <div class="relative w-full h-64 md:h-96 rounded-2xl overflow-hidden mb-10 group cursor-pointer focus-ring" tabindex="0" onclick="if(app.state.content.hero) app.player.openSeries(app.state.content.hero._id)" id="hero-container" aria-label="Featured Story">
+                    <div class="skeleton absolute inset-0 w-full h-full z-20" id="hero-skeleton"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent z-10"></div>
+                    <img id="hero-image" src="" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-0" alt="Hero" onerror="this.style.display='none'">
+                    <div class="absolute bottom-0 left-0 p-6 md:p-10 z-20 w-full md:w-2/3">
+                        <span id="hero-badge" class="bg-action text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-3 inline-block opacity-0"></span>
+                        <h1 id="hero-title" class="text-3xl md:text-5xl font-black mb-2 text-white drop-shadow-lg opacity-0"></h1>
+                        <p id="hero-desc" class="text-gray-300 text-sm md:text-base mb-6 line-clamp-2 opacity-0"></p>
+                        <div class="flex space-x-4 opacity-0" id="hero-actions">
+                            <button class="bg-white text-black px-6 py-2.5 rounded-lg font-bold flex items-center space-x-2 hover:bg-gray-200 transition-colors focus-ring" aria-label="Play Now">
+                                <i data-lucide="play" class="w-5 h-5 fill-current"></i> <span>Play Now</span>
+                            </button>
                         </div>
                     </div>
-                    <p class="text-3xl font-bold text-primary">0</p>
                 </div>
-                <!-- Stat Card 2 -->
-                <div class="bg-surface border border-gray-800 p-6 rounded-xl shadow-lg transform transition-transform hover:-translate-y-1">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-gray-400 font-semibold">Wallet Balance</h4>
-                        <div class="bg-green-900/30 p-2 rounded-lg text-green-400">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+
+                <!-- Trending Rows -->
+                <div class="mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold flex items-center"><i data-lucide="trending-up" class="w-5 h-5 mr-2 text-action"></i> Trending Now</h3>
+                        <button class="text-accent text-sm font-bold hover:underline focus-ring" onclick="app.nav.go('trending')">View All</button>
+                    </div>
+                    <div class="flex space-x-4 overflow-x-auto pb-4 hide-scrollbar" id="discover-trending-grid">
+                        <!-- Skeletons -->
+                        <div class="min-w-[160px] md:min-w-[200px] h-64 skeleton rounded-xl"></div>
+                        <div class="min-w-[160px] md:min-w-[200px] h-64 skeleton rounded-xl"></div>
+                        <div class="min-w-[160px] md:min-w-[200px] h-64 skeleton rounded-xl"></div>
+                        <div class="min-w-[160px] md:min-w-[200px] h-64 skeleton rounded-xl"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= VIEW: SEARCH ================= -->
+            <section id="view-search" class="spa-section p-4 md:p-8">
+                <div class="max-w-4xl mx-auto">
+                    <div class="relative mb-8">
+                        <i data-lucide="search" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-6 h-6"></i>
+                        <input type="text" id="search-input" placeholder="Search movies, series, creators..." class="w-full bg-surface border border-gray-700 rounded-xl py-4 pl-12 pr-4 text-lg text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all" aria-label="Search Input">
+                    </div>
+                    
+                    <div class="flex space-x-3 overflow-x-auto pb-4 mb-6 hide-scrollbar" role="tablist">
+                        <button class="bg-accent text-background font-bold px-4 py-1.5 rounded-full whitespace-nowrap focus-ring search-filter-btn" data-filter="all" onclick="app.api.setSearchFilter('all')" role="tab" aria-selected="true">All</button>
+                        <button class="bg-gray-800 text-gray-300 hover:text-white px-4 py-1.5 rounded-full whitespace-nowrap border border-gray-700 focus-ring search-filter-btn" data-filter="series" onclick="app.api.setSearchFilter('series')" role="tab">Series</button>
+                        <button class="bg-gray-800 text-gray-300 hover:text-white px-4 py-1.5 rounded-full whitespace-nowrap border border-gray-700 focus-ring search-filter-btn" data-filter="movies" onclick="app.api.setSearchFilter('movies')" role="tab">Movies</button>
+                    </div>
+
+                    <!-- Search Results Area -->
+                    <div id="search-results-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 d-none"></div>
+
+                    <!-- Empty State for Search -->
+                    <div class="text-center py-20 text-gray-500" id="search-empty-state">
+                        <i data-lucide="film" class="w-16 h-16 mx-auto mb-4 opacity-50"></i>
+                        <h3 class="text-xl font-bold text-gray-300">Discover New Stories</h3>
+                        <p>Type above to search the AfroStory library.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= VIEW: GENERIC GRID VIEWS ================= -->
+            <section id="view-trending" class="spa-section p-4 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 border-b border-gray-800 pb-2">Trending Worldwide</h2>
+                <div id="trending-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            </section>
+
+            <section id="view-continue" class="spa-section p-4 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 border-b border-gray-800 pb-2">Continue Watching</h2>
+                <div id="continue-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            </section>
+
+            <section id="view-favorites" class="spa-section p-4 md:p-8">
+                <h2 class="text-2xl font-bold mb-6 border-b border-gray-800 pb-2">My Favorites</h2>
+                <div id="favorites-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+            </section>
+
+            <!-- ================= VIEW: NOTIFICATIONS ================= -->
+            <section id="view-notifications" class="spa-section p-4 md:p-8">
+                <div class="max-w-3xl mx-auto">
+                    <div class="flex justify-between items-center border-b border-gray-800 pb-2 mb-6">
+                        <h2 class="text-2xl font-bold">Notifications</h2>
+                        <button id="mark-read-btn" class="text-sm text-gray-400 hover:text-white focus-ring" onclick="app.api.markNotificationsRead()">Mark all as read</button>
+                    </div>
+                    <div id="notifications-list" class="space-y-4">
+                        <div class="skeleton h-20 w-full rounded-xl"></div>
+                        <div class="skeleton h-20 w-full rounded-xl"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= VIEW: SETTINGS ================= -->
+            <section id="view-settings" class="spa-section p-4 md:p-8">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6 border-b border-gray-800 pb-2">App Settings</h2>
+                    <div class="bg-surface border border-gray-800 rounded-xl p-6 space-y-6">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-white">Dark Mode</h4>
+                                <p class="text-sm text-gray-400">Cinematic viewing experience</p>
+                            </div>
+                            <div class="w-12 h-6 bg-accent rounded-full relative cursor-not-allowed opacity-80" aria-label="Dark Mode Forced" title="Forced in V1 Blueprint">
+                                <div class="w-4 h-4 bg-background rounded-full absolute right-1 top-1"></div>
+                            </div>
+                        </div>
+                        <hr class="border-gray-800">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-white">Push Notifications</h4>
+                                <p class="text-sm text-gray-400">Receive alerts for new episodes</p>
+                            </div>
+                            <button id="btn-push-notifs" onclick="app.api.togglePushNotifications(this)" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm border border-gray-600 hover:bg-gray-700 focus-ring">Enable</button>
+                        </div>
+                        <hr class="border-gray-800">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-white">Language</h4>
+                                <p class="text-sm text-gray-400">Default audio & subtitle preference</p>
+                            </div>
+                            <select class="bg-background border border-gray-700 rounded-lg p-2 text-white focus-ring" onchange="app.api.updateLanguage(this.value)" aria-label="Language Selector">
+                                <option value="en">English</option>
+                                <option value="fr">French</option>
+                                <option value="sw">Swahili</option>
+                            </select>
                         </div>
                     </div>
-                    <p class="text-3xl font-bold text-primary">₦0.00</p>
                 </div>
-                <!-- Stat Card 3 -->
-                <div class="bg-surface border border-gray-800 p-6 rounded-xl shadow-lg transform transition-transform hover:-translate-y-1">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-gray-400 font-semibold">Active Readers</h4>
-                        <div class="bg-orange-900/30 p-2 rounded-lg text-action">
-                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            </section>
+
+            <!-- ================= VIEW: PLAYER / SERIES ================= -->
+            <section id="view-player" class="spa-section">
+                <!-- Native Video Player Shell (HLS enabled) -->
+                <div class="w-full bg-black aspect-video relative group" id="video-container">
+                    <video id="hls-player" class="w-full h-full" controls crossorigin playsinline></video>
+                    
+                    <div id="video-overlay" class="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
+                        <i data-lucide="play-circle" class="w-20 h-20 text-gray-700"></i>
+                    </div>
+
+                    <!-- Custom Back Button Overlay -->
+                    <button onclick="app.player.close()" class="absolute top-4 left-4 z-20 text-white bg-black/50 p-2 rounded-full hover:text-accent focus-ring shadow-lg" aria-label="Close Player">
+                        <i data-lucide="arrow-left"></i>
+                    </button>
+                </div>
+
+                <!-- Series Meta -->
+                <div class="p-4 md:p-8 max-w-6xl mx-auto">
+                    <div id="player-meta-error" class="d-none text-center py-10"></div>
+                    <div id="player-meta-content">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h1 class="text-3xl font-bold mb-2" id="series-title">Loading...</h1>
+                                <div class="flex items-center space-x-3 text-sm text-gray-400 mb-4" id="series-meta">
+                                    <span class="text-success font-bold" id="series-meta-match">--% Match</span>
+                                    <span id="series-meta-year">----</span>
+                                    <span class="border border-gray-600 px-1 text-[10px]">18+</span>
+                                    <span id="series-meta-episodes">0 Episodes</span>
+                                    <span class="bg-gray-800 px-2 py-0.5 rounded text-white">HD</span>
+                                </div>
+                            </div>
+                            <div class="flex space-x-3">
+                                <button id="btn-fav" class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring transition-colors" onclick="app.api.toggleFavorite(app.state.content.currentSeriesId, this)" aria-label="Toggle Favorite"><i data-lucide="plus"></i></button>
+                                <button id="btn-like" class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring transition-colors" onclick="app.api.likeSeries(app.state.content.currentSeriesId, this)" aria-label="Like"><i data-lucide="thumbs-up"></i></button>
+                                <button class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring" onclick="app.api.shareSeries(app.state.content.currentSeriesId)" aria-label="Share"><i data-lucide="share-2"></i></button>
+                            </div>
+                        </div>
+                        
+                        <p class="text-gray-300 mb-6 leading-relaxed max-w-3xl" id="series-desc">...</p>
+                        
+                        <!-- Episodes List -->
+                        <div class="mt-10 border-t border-gray-800 pt-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-xl font-bold">Episodes</h3>
+                                <select id="season-selector" class="bg-surface border border-gray-700 text-white rounded-lg px-4 py-2 outline-none focus-ring" onchange="app.player.loadSeason(this.value)" aria-label="Select Season">
+                                    <option value="1">Season 1</option>
+                                </select>
+                            </div>
+                            
+                            <div class="space-y-4" id="episodes-list">
+                                <!-- Injected Dynamically -->
+                                <div class="skeleton h-24 w-full rounded-xl"></div>
+                            </div>
                         </div>
                     </div>
-                    <p class="text-3xl font-bold text-primary">0</p>
                 </div>
-            </div>
+            </section>
+
+            <!-- ================= VIEW: WALLET ================= -->
+            <section id="view-wallet" class="spa-section p-4 md:p-8">
+                <div class="max-w-4xl mx-auto">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="bg-gradient-to-br from-surface to-gray-900 border border-gray-700 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                            <i data-lucide="coins" class="absolute -right-4 -bottom-4 w-32 h-32 text-gray-800 opacity-30"></i>
+                            <h3 class="text-gray-400 font-semibold mb-2">Story Coins (Spendable)</h3>
+                            <div class="flex items-baseline space-x-2 mb-6">
+                                <h1 class="text-4xl font-black text-accent" id="wallet-coins-page">0.00</h1>
+                                <span class="text-gray-500 font-bold">Coins</span>
+                            </div>
+                            <button id="btn-fund" class="w-full bg-action hover:bg-orange-600 text-white font-bold py-3 rounded-lg transition-colors shadow-[0_4px_15px_rgba(230,126,34,0.3)] focus-ring" onclick="app.api.fundWallet(this)">Fund via Paystack</button>
+                        </div>
+                        
+                        <div class="bg-gradient-to-br from-surface to-gray-900 border border-gray-700 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                            <i data-lucide="banknote" class="absolute -right-4 -bottom-4 w-32 h-32 text-gray-800 opacity-30"></i>
+                            <h3 class="text-gray-400 font-semibold mb-2">Creator Earnings (Locked)</h3>
+                            <div class="flex items-baseline space-x-2 mb-6">
+                                <span class="text-2xl text-success font-bold">₦</span>
+                                <h1 class="text-4xl font-black text-primary" id="wallet-earnings-page">0.00</h1>
+                            </div>
+                            <button id="btn-withdraw" class="w-full bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white font-bold py-3 rounded-lg transition-colors focus-ring" onclick="app.api.withdrawFunds(this)">Withdraw to Bank</button>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold">Transaction History</h3>
+                        <div class="flex space-x-2 text-sm" id="tx-filters">
+                            <button class="text-accent focus-ring font-bold" onclick="app.ui.filterTx('ALL')">All</button>
+                            <button class="text-gray-500 focus-ring hover:text-white" onclick="app.ui.filterTx('CREDIT')">Incoming</button>
+                            <button class="text-gray-500 focus-ring hover:text-white" onclick="app.ui.filterTx('DEBIT')">Outgoing</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-surface border border-gray-800 rounded-xl overflow-hidden" id="transaction-history">
+                        <div class="p-8 text-center text-gray-500">
+                            <div class="skeleton h-12 w-full mb-2"></div>
+                            <div class="skeleton h-12 w-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= VIEW: STUDIO ================= -->
+            <section id="view-studio" class="spa-section p-4 md:p-8">
+                <div class="max-w-6xl mx-auto">
+                    <div class="flex justify-between items-end mb-8 border-b border-gray-800 pb-4">
+                        <div>
+                            <h1 class="text-3xl font-black mb-1">Creator Studio</h1>
+                            <p class="text-accent font-bold tracking-widest text-sm uppercase" id="studio-brand">LOADING...</p>
+                        </div>
+                        
+                        <input type="file" id="episode-upload-input" class="d-none" accept="video/mp4,video/x-m4v,video/webm" onchange="app.api.uploadEpisode(event)">
+                        <button id="btn-upload" class="bg-accent text-background font-bold py-2 px-4 md:px-6 rounded-lg hover:bg-yellow-600 transition-colors flex items-center focus-ring" onclick="document.getElementById('episode-upload-input').click()">
+                            <i data-lucide="upload-cloud" class="w-5 h-5 mr-2"></i> <span class="hidden sm:inline">Upload Episode</span><span class="sm:hidden">Upload</span>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <div class="bg-surface p-6 rounded-xl border border-gray-800">
+                            <p class="text-gray-400 text-sm mb-1">Total Views</p>
+                            <h3 class="text-2xl font-bold text-white" id="stat-views">0</h3>
+                        </div>
+                        <div class="bg-surface p-6 rounded-xl border border-gray-800">
+                            <p class="text-gray-400 text-sm mb-1">Followers</p>
+                            <h3 class="text-2xl font-bold text-white" id="stat-followers">0</h3>
+                        </div>
+                        <div class="bg-surface p-6 rounded-xl border border-gray-800">
+                            <p class="text-gray-400 text-sm mb-1">Ad Unlocks</p>
+                            <h3 class="text-2xl font-bold text-white" id="stat-ads">0</h3>
+                        </div>
+                        <div class="bg-surface p-6 rounded-xl border border-gray-800">
+                            <p class="text-gray-400 text-sm mb-1">Coin Unlocks</p>
+                            <h3 class="text-2xl font-bold text-accent" id="stat-coins">0</h3>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold mb-4">My Uploads</h3>
+                    <div id="studio-uploads-list" class="bg-surface border border-gray-800 rounded-xl overflow-hidden">
+                        <div class="p-8 text-center text-gray-500">
+                            <div class="skeleton h-12 w-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- ================= VIEW: PROFILE ================= -->
+            <section id="view-profile" class="spa-section p-4 md:p-8">
+                <div class="max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold mb-6 border-b border-gray-800 pb-2">My Profile</h2>
+                    <form id="profile-form" onsubmit="app.api.updateProfile(event)">
+                        <div class="bg-surface border border-gray-800 rounded-xl p-6 space-y-6">
+                            <div class="flex items-center space-x-6">
+                                <div class="w-24 h-24 rounded-full bg-gray-800 border-2 border-accent flex items-center justify-center text-3xl font-bold overflow-hidden relative group cursor-pointer" onclick="document.getElementById('avatar-upload-input').click()" aria-label="Change Avatar" role="button" tabindex="0">
+                                    <img id="profile-avatar-img" src="" class="w-full h-full object-cover d-none" alt="Profile Picture">
+                                    <span id="profile-avatar-fallback">?</span>
+                                    <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <i data-lucide="camera" class="text-white"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <input type="file" id="avatar-upload-input" class="d-none" accept="image/jpeg,image/png,image/webp" onchange="app.api.uploadAvatar(event)">
+                                    <button type="button" id="btn-change-avatar" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm border border-gray-600 hover:bg-gray-700 focus-ring" onclick="document.getElementById('avatar-upload-input').click()">Change Avatar</button>
+                                </div>
+                            </div>
+                            <hr class="border-gray-800">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1" for="profile-username">Username</label>
+                                    <input type="text" id="profile-username" name="username" class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus:border-accent outline-none" required minlength="3" aria-required="true">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1" for="profile-email">Email</label>
+                                    <input type="email" id="profile-email" name="email" class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus:border-accent outline-none" required aria-required="true">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-400 mb-1" for="profile-pin">Security PIN (For Withdrawals)</label>
+                                    <input type="password" id="profile-pin" name="pin" placeholder="Enter new 4-digit PIN" class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus:border-accent outline-none" minlength="4" maxlength="4" pattern="\d{4}" title="4 digit numeric PIN">
+                                </div>
+                            </div>
+                            <button type="submit" id="btn-save-profile" class="w-full bg-accent text-background font-bold py-3 rounded-lg focus-ring hover:bg-yellow-600 transition-colors">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </section>
         </div>
     </main>
 
-    <!-- ================= DASHBOARD ENGINE LOGIC ================= -->
+    <!-- ================= 3. BOTTOM NAV (MOBILE) ================= -->
+    <nav class="lg:hidden fixed bottom-0 w-full bg-surface/95 backdrop-blur-md border-t border-gray-800 flex justify-around py-2 pb-4 z-40" aria-label="Mobile Navigation">
+        <button onclick="app.nav.go('discover')" class="mobile-nav-btn text-accent flex flex-col items-center p-2 focus-ring rounded-lg" data-target="discover">
+            <i data-lucide="compass" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-semibold">Home</span>
+        </button>
+        <button onclick="app.nav.go('search')" class="mobile-nav-btn text-gray-500 hover:text-white flex flex-col items-center p-2 transition-colors focus-ring rounded-lg" data-target="search">
+            <i data-lucide="search" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-semibold">Search</span>
+        </button>
+        <button onclick="app.nav.go('wallet')" class="mobile-nav-btn text-gray-500 hover:text-white flex flex-col items-center p-2 transition-colors focus-ring rounded-lg" data-target="wallet">
+            <i data-lucide="wallet" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-semibold">Wallet</span>
+        </button>
+        <button onclick="app.nav.go('studio')" class="mobile-nav-btn text-gray-500 hover:text-white flex flex-col items-center p-2 transition-colors focus-ring rounded-lg" data-target="studio">
+            <i data-lucide="video" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-semibold">Studio</span>
+        </button>
+        <button onclick="app.nav.go('profile')" class="mobile-nav-btn text-gray-500 hover:text-white flex flex-col items-center p-2 transition-colors focus-ring rounded-lg" data-target="profile">
+            <i data-lucide="user" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-semibold">Profile</span>
+        </button>
+    </nav>
+
+    <!-- ================= 4. ENTERPRISE SPA ENGINE ================= -->
     <script>
-        // Custom SweetAlert Configuration for the Dashboard
-        const Toast = Swal.mixin({
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true,
-            background: '#1B1B1B',
-            color: '#F5F5F5',
-            iconColor: '#D4A017'
-        });
+        lucide.createIcons();
 
-        // Simulating User Authentication State
-        // In a full production flow, this would fetch from /api/auth/me
-        document.addEventListener('DOMContentLoaded', () => {
-            // Check if there is a cached username (from registration)
-            // For now, we will dynamically update the UI to show the system is alive
-            const systemUser = "Authenticated User";
-            
-            document.getElementById('display-username').innerText = systemUser;
-            document.getElementById('welcome-name').innerText = systemUser;
-            document.getElementById('avatar-initial').innerText = systemUser.charAt(0).toUpperCase();
+        const app = {
+            state: {
+                isOnline: navigator.onLine,
+                user: null,
+                content: { hero: null, currentSeriesId: null, searchFilter: 'all', txHistory: [] }
+            },
 
-            Toast.fire({
-                icon: 'success',
-                title: 'Vault Decrypted & Connected'
-            });
-        });
+            toast: Swal.mixin({
+                toast: true, position: 'top-end', showConfirmButton: false, timer: 3000,
+                timerProgressBar: true, background: '#1B1B1B', color: '#F5F5F5'
+            }),
 
-        // Secure Logout Handler
-        function handleLogout() {
-            Swal.fire({
-                title: 'Lock Vault?',
-                text: "You will be signed out of AfroStory.",
-                icon: 'warning',
-                showCancelButton: true,
-                background: '#1B1B1B',
-                color: '#F5F5F5',
-                confirmButtonColor: '#E67E22',
-                cancelButtonColor: '#374151',
-                confirmButtonText: 'Yes, secure it.'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Send request to backend to destroy cookie
-                    fetch('/api/auth/logout', { method: 'POST' })
-                    .then(() => {
-                        window.location.href = '/index.html';
-                    })
-                    .catch(err => {
-                        console.error('Logout error:', err);
-                        window.location.href = '/index.html';
+            initNetworkMonitor() {
+                window.addEventListener('online', () => {
+                    this.state.isOnline = true;
+                    this.toast.fire({ icon: 'success', title: 'Connection Restored', iconColor: '#2ECC71' });
+                    // Retry initialization if it failed previously
+                    if (!this.state.user) this.auth.fetchMe();
+                });
+                window.addEventListener('offline', () => {
+                    this.state.isOnline = false;
+                    this.toast.fire({ icon: 'error', title: 'You are offline.', iconColor: '#E74C3C' });
+                });
+            },
+
+            // --- NAVIGATION (HISTORY API) ---
+            nav: {
+                go(viewId, pushHistory = true) {
+                    // Cleanup Player if navigating away
+                    if(viewId !== 'player') {
+                        app.player.close();
+                    }
+
+                    document.querySelectorAll('.spa-section').forEach(sec => sec.classList.remove('active'));
+                    const target = document.getElementById(`view-${viewId}`);
+                    if(target) target.classList.add('active');
+                    
+                    const titles = { discover: 'Discover', search: 'Search', player: 'Now Playing', wallet: 'Wallet', studio: 'Creator Studio', profile: 'My Profile', trending: 'Trending', continue: 'Continue Watching', favorites: 'Favorites', notifications: 'Notifications', settings: 'Settings' };
+                    document.getElementById('header-title').innerText = titles[viewId] || 'AfroStory';
+
+                    document.querySelectorAll('#desktop-nav .nav-btn').forEach(btn => {
+                        if(btn.dataset.target === viewId) {
+                            btn.className = "nav-btn w-full flex items-center space-x-3 bg-gray-800/50 text-accent px-4 py-2.5 rounded-lg transition-all focus-ring";
+                            btn.querySelector('span').classList.add('text-accent');
+                        } else {
+                            btn.className = "nav-btn w-full flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-2.5 rounded-lg transition-all focus-ring";
+                            btn.querySelector('span').classList.remove('text-accent');
+                        }
+                    });
+
+                    document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                        if(btn.dataset.target === viewId || (viewId==='settings' && btn.dataset.target==='profile')) {
+                            btn.classList.replace('text-gray-500', 'text-accent');
+                        } else {
+                            btn.classList.replace('text-accent', 'text-gray-500');
+                        }
+                    });
+
+                    document.getElementById('main-scroll-area').scrollTop = 0;
+
+                    if (pushHistory) {
+                        let query = `?view=${viewId}`;
+                        if(viewId === 'player' && app.state.content.currentSeriesId) {
+                            query += `&id=${app.state.content.currentSeriesId}`;
+                        }
+                        history.pushState({ view: viewId, id: app.state.content.currentSeriesId }, titles[viewId], query);
+                    }
+                },
+                back() {
+                    if (history.length > 1 && history.state) { history.back(); } 
+                    else { this.go('discover'); }
+                },
+                initListener() {
+                    window.addEventListener('popstate', (e) => {
+                        if (e.state && e.state.view) {
+                            if(e.state.view === 'player' && e.state.id) {
+                                app.player.openSeries(e.state.id, false);
+                            } else {
+                                this.go(e.state.view, false);
+                            }
+                        }
+                    });
+                    
+                    const params = new URLSearchParams(window.location.search);
+                    const initialView = params.get('view') || 'discover';
+                    const seriesId = params.get('id');
+                    
+                    if (initialView === 'player' && seriesId) {
+                        app.player.openSeries(seriesId, false);
+                    } else {
+                        this.go(initialView, false);
+                    }
+                }
+            },
+
+            // --- CORE API CLIENT ---
+            httpClient: {
+                async request(endpoint, options = {}, retries = 1) {
+                    const url = `/api${endpoint}`;
+                    const config = {
+                        ...options,
+                        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+                        credentials: 'include'
+                    };
+                    
+                    if (options.body && options.body instanceof FormData) {
+                        delete config.headers['Content-Type']; // Let browser set multipart/form-data
+                    }
+
+                    for (let i = 0; i <= retries; i++) {
+                        try {
+                            const res = await fetch(url, config);
+                            const data = await res.json().catch(() => ({}));
+                            
+                            if (res.status === 401) {
+                                window.location.href = '/index.html';
+                                throw new Error('Session Expired');
+                            }
+                            if (!res.ok) throw new Error(data.message || `Error ${res.status}`);
+                            
+                            return data;
+                        } catch (err) {
+                            if (err.name === 'AbortError') throw err; // Don't retry aborted requests
+                            if (i === retries) throw err;
+                        }
+                    }
+                }
+            },
+
+            // --- AUTHENTICATION ---
+            auth: {
+                async fetchMe() {
+                    document.getElementById('global-loader').classList.remove('d-none');
+                    document.getElementById('global-error-state').classList.add('d-none');
+                    try {
+                        const data = await app.httpClient.request('/auth/me');
+                        app.state.user = data;
+                        app.ui.hydrateUserUI();
+                        document.getElementById('global-loader').classList.add('d-none');
+                        
+                        // Load Dashboard Data sequentially
+                        await Promise.allSettled([
+                            app.api.fetchDiscoverData(),
+                            app.api.fetchWalletData(),
+                            app.api.fetchListsData(),
+                            app.api.fetchStudioStats(),
+                            app.api.fetchNotifications()
+                        ]);
+                    } catch (err) {
+                        document.getElementById('global-error-state').classList.remove('d-none');
+                        if(err.message === 'Session Expired') return; // Redirect already handled
+                        app.toast.fire({ icon: 'error', title: 'Could not connect to AfroStory' });
+                    }
+                },
+                async logout() {
+                    Swal.fire({
+                        title: 'Lock Vault?', text: "Securely sign out of AfroStory.", icon: 'warning',
+                        showCancelButton: true, background: '#1B1B1B', color: '#F5F5F5',
+                        confirmButtonColor: '#E67E22', confirmButtonText: 'Logout'
+                    }).then(async (res) => {
+                        if(res.isConfirmed) {
+                            try {
+                                document.getElementById('global-loader').classList.remove('d-none');
+                                await app.httpClient.request('/auth/logout', { method: 'POST' });
+                            } finally {
+                                window.location.href = '/index.html'; 
+                            }
+                        }
                     });
                 }
-            });
-        }
+            },
+
+            // --- REAL API LOGIC ---
+            api: {
+                async fetchDiscoverData() {
+                    try {
+                        const [heroRes, trendingRes] = await Promise.all([
+                            app.httpClient.request('/series/hero'),
+                            app.httpClient.request('/series/trending')
+                        ]);
+                        
+                        // Hero
+                        if (heroRes && heroRes._id) {
+                            app.state.content.hero = heroRes;
+                            document.getElementById('hero-skeleton').classList.add('d-none');
+                            document.getElementById('hero-image').src = heroRes.coverImage || '';
+                            document.getElementById('hero-badge').innerText = heroRes.tags && heroRes.tags.length > 0 ? app.ui.escapeHTML(heroRes.tags[0]) : 'Featured';
+                            document.getElementById('hero-title').innerText = app.ui.escapeHTML(heroRes.title);
+                            document.getElementById('hero-desc').innerText = app.ui.escapeHTML(heroRes.description);
+                            
+                            ['hero-image', 'hero-badge', 'hero-title', 'hero-desc', 'hero-actions'].forEach(id => {
+                                document.getElementById(id).classList.remove('opacity-0');
+                            });
+                        }
+
+                        // Trending
+                        app.ui.renderGrid('discover-trending-grid', trendingRes, false);
+                        app.ui.renderGrid('trending-grid', trendingRes, true, "No trending stories right now.");
+                    } catch (err) {
+                        app.ui.renderGrid('discover-trending-grid', [], true, "Failed to load trending items", "alert-triangle");
+                    }
+                },
+
+                async fetchWalletData() {
+                    try {
+                        const wallet = await app.httpClient.request('/wallet');
+                        const balance = wallet.storyCoins || "0.00";
+                        const earnings = wallet.lockedEarnings || "0.00";
+                        
+                        document.getElementById('ui-wallet-balance').innerText = app.ui.escapeHTML(balance.toString());
+                        document.getElementById('wallet-coins-page').innerText = app.ui.escapeHTML(balance.toString());
+                        document.getElementById('wallet-earnings-page').innerText = app.ui.escapeHTML(earnings.toString());
+
+                        const history = await app.httpClient.request('/wallet/history');
+                        app.state.content.txHistory = history || [];
+                        app.ui.renderTransactions(app.state.content.txHistory);
+                    } catch (err) {}
+                },
+
+                async fetchListsData() {
+                    try {
+                        const [continueData, favoritesData] = await Promise.all([
+                            app.httpClient.request('/history/continue').catch(() => []),
+                            app.httpClient.request('/favorites').catch(() => [])
+                        ]);
+                        app.ui.renderGrid('continue-grid', continueData, true, "You have not started watching anything yet.", "play-circle");
+                        app.ui.renderGrid('favorites-grid', favoritesData, true, "Your library is empty. Save stories you love.", "heart");
+                    } catch (err) {}
+                },
+
+                async fetchNotifications() {
+                    try {
+                        const notifs = await app.httpClient.request('/notifications');
+                        const notifContainer = document.getElementById('notifications-list');
+                        const unreadCount = notifs.filter(n => !n.isRead).length;
+
+                        if (unreadCount > 0) {
+                            const badge = document.getElementById('ui-notif-badge');
+                            badge.innerText = unreadCount;
+                            badge.classList.remove('d-none');
+                        } else {
+                            document.getElementById('ui-notif-badge').classList.add('d-none');
+                        }
+
+                        if(notifs.length === 0) {
+                            notifContainer.innerHTML = app.ui.getEmptyStateHtml("No New Alerts", "You are all caught up.", "bell");
+                        } else {
+                            let html = '';
+                            notifs.forEach(n => {
+                                html += `
+                                    <div class="notif-item bg-surface border border-gray-800 p-4 rounded-xl flex items-start space-x-4 ${!n.isRead ? 'border-l-4 border-l-accent' : 'opacity-70'}">
+                                        <div class="bg-gray-800 p-2 rounded-full shrink-0"><i data-lucide="bell" class="w-5 h-5 text-accent"></i></div>
+                                        <div>
+                                            <h4 class="font-bold text-white">${app.ui.escapeHTML(n.title)}</h4>
+                                            <p class="text-sm text-gray-400">${app.ui.escapeHTML(n.message)}</p>
+                                            <span class="text-xs text-gray-500">${new Date(n.createdAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>`;
+                            });
+                            notifContainer.innerHTML = html;
+                            lucide.createIcons();
+                        }
+                    } catch (err) {}
+                },
+
+                async markNotificationsRead() {
+                    const btn = document.getElementById('mark-read-btn');
+                    app.ui.setLoading(btn, true, 'Marking...');
+                    try {
+                        await app.httpClient.request('/notifications/read', { method: 'POST' });
+                        // Instant visual update
+                        document.getElementById('ui-notif-badge').classList.add('d-none');
+                        document.querySelectorAll('.notif-item.border-l-accent').forEach(el => {
+                            el.classList.remove('border-l-4', 'border-l-accent');
+                            el.classList.add('opacity-70');
+                        });
+                        app.toast.fire({ icon: 'success', title: 'Marked as read' });
+                    } catch (err) {
+                        app.toast.fire({ icon: 'error', title: 'Failed to update' });
+                    } finally {
+                        app.ui.setLoading(btn, false, 'Mark all as read');
+                    }
+                },
+
+                async fetchStudioStats() {
+                    try {
+                        const stats = await app.httpClient.request('/studio/analytics').catch(()=>null);
+                        if (stats) {
+                            document.getElementById('stat-views').innerText = app.ui.escapeHTML(stats.totalViews?.toString() || "0");
+                            document.getElementById('stat-followers').innerText = app.ui.escapeHTML(stats.followers?.toString() || "0");
+                            document.getElementById('stat-ads').innerText = app.ui.escapeHTML(stats.totalAdUnlocks?.toString() || "0");
+                            document.getElementById('stat-coins').innerText = app.ui.escapeHTML(stats.totalUnlocks?.toString() || "0");
+                        }
+                        const uploads = await app.httpClient.request('/studio/uploads').catch(()=>[]);
+                        if (uploads.length === 0) {
+                            document.getElementById('studio-uploads-list').innerHTML = app.ui.getEmptyStateHtml("No Content Yet", "Upload your first series to start earning.", "video");
+                        } else {
+                            app.ui.renderGrid('studio-uploads-list', uploads, false);
+                        }
+                    } catch (err) {}
+                },
+
+                // Search
+                setSearchFilter(type) {
+                    app.state.content.searchFilter = type;
+                    document.querySelectorAll('.search-filter-btn').forEach(btn => {
+                        if(btn.dataset.filter === type) {
+                            btn.classList.replace('bg-gray-800', 'bg-accent');
+                            btn.classList.replace('text-gray-300', 'text-background');
+                            btn.setAttribute('aria-selected', 'true');
+                        } else {
+                            btn.classList.replace('bg-accent', 'bg-gray-800');
+                            btn.classList.replace('text-background', 'text-gray-300');
+                            btn.setAttribute('aria-selected', 'false');
+                        }
+                    });
+                    document.getElementById('search-input').dispatchEvent(new Event('input'));
+                },
+                
+                async executeSearch(query, signal) {
+                    try {
+                        const results = await app.httpClient.request(`/search?q=${encodeURIComponent(query)}&type=${app.state.content.searchFilter}`, { signal });
+                        const emptyState = document.getElementById('search-empty-state');
+                        const resultsGrid = document.getElementById('search-results-grid');
+
+                        if(results.length > 0) {
+                            emptyState.classList.add('d-none');
+                            resultsGrid.classList.remove('d-none');
+                            app.ui.renderGrid('search-results-grid', results);
+                        } else {
+                            emptyState.classList.remove('d-none');
+                            resultsGrid.classList.add('d-none');
+                            emptyState.innerHTML = app.ui.getEmptyStateHtml("No Results Found", `We couldn't find anything matching "${app.ui.escapeHTML(query)}".`, "alert-circle");
+                        }
+                    } catch (err) {
+                        if(err.name !== 'AbortError') app.toast.fire({ icon: 'error', title: 'Search failed' });
+                    }
+                },
+
+                // Profile Updates
+                async updateProfile(e) {
+                    e.preventDefault();
+                    const form = e.target;
+                    const btn = document.getElementById('btn-save-profile');
+                    
+                    const username = form.username.value.trim();
+                    const email = form.email.value.trim();
+                    const pin = form.pin.value;
+
+                    if(username.length < 3) return app.toast.fire({ icon: 'error', title: 'Username must be at least 3 chars' });
+                    if(pin && pin.length !== 4) return app.toast.fire({ icon: 'error', title: 'PIN must be 4 digits' });
+
+                    app.ui.setLoading(btn, true, 'Saving...');
+                    try {
+                        const res = await app.httpClient.request('/profile/update', {
+                            method: 'POST',
+                            body: JSON.stringify({ username, email, pin })
+                        });
+                        
+                        app.state.user = { ...app.state.user, ...res.user };
+                        app.ui.hydrateUserUI();
+                        app.toast.fire({ icon: 'success', title: 'Profile Updated' });
+                        form.pin.value = ''; 
+                    } catch (err) {
+                        app.toast.fire({ icon: 'error', title: err.message });
+                    } finally {
+                        app.ui.setLoading(btn, false, 'Save Changes');
+                    }
+                },
+                
+                async uploadAvatar(e) {
+                    const file = e.target.files[0];
+                    if(!file) return;
+                    
+                    // Validation
+                    if (file.size > 5 * 1024 * 1024) return app.toast.fire({ icon: 'error', title: 'Image must be less than 5MB' });
+                    if (!file.type.startsWith('image/')) return app.toast.fire({ icon: 'error', title: 'Invalid image format' });
+
+                    const btn = document.getElementById('btn-change-avatar');
+                    app.ui.setLoading(btn, true, 'Uploading...');
+                    try {
+                        const formData = new FormData();
+                        formData.append('avatar', file);
+                        
+                        const res = await app.httpClient.request('/profile/avatar', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        
+                        app.state.user.avatarUrl = res.avatarUrl;
+                        app.ui.hydrateUserUI();
+                        app.toast.fire({ icon: 'success', title: 'Avatar Updated' });
+                    } catch (err) {
+                        app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' });
+                    } finally {
+                        app.ui.setLoading(btn, false, 'Change Avatar');
+                        e.target.value = ''; // Reset input
+                    }
+                },
+
+                async uploadEpisode(e) {
+                    const file = e.target.files[0];
+                    if(!file) return;
+
+                    // Validation
+                    if (file.size > 500 * 1024 * 1024) return app.toast.fire({ icon: 'error', title: 'Video must be less than 500MB' });
+                    if (!file.type.startsWith('video/')) return app.toast.fire({ icon: 'error', title: 'Invalid video format' });
+
+                    const btn = document.getElementById('btn-upload');
+                    app.ui.setLoading(btn, true, 'Uploading...');
+                    try {
+                        const formData = new FormData();
+                        formData.append('video', file);
+                        
+                        await app.httpClient.request('/studio/upload', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        app.toast.fire({ icon: 'success', title: 'Episode processing started' });
+                        this.fetchStudioStats();
+                    } catch (err) {
+                        app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' });
+                    } finally {
+                        app.ui.setLoading(btn, false, '<i data-lucide="upload-cloud" class="w-5 h-5 mr-2"></i> <span class="hidden sm:inline">Upload Episode</span><span class="sm:hidden">Upload</span>');
+                        lucide.createIcons();
+                        e.target.value = ''; // Reset input
+                    }
+                },
+
+                // Finance
+                async fundWallet(btn) {
+                    try {
+                        const { value: amount } = await Swal.fire({
+                            title: 'Fund Wallet', input: 'number', inputLabel: 'Amount (₦)', inputValue: 1000,
+                            showCancelButton: true, background: '#1B1B1B', color: '#F5F5F5', confirmButtonColor: '#E67E22',
+                            inputValidator: (val) => { if (!val || val <= 0) return 'Enter a valid amount'; }
+                        });
+                        if (amount) {
+                            app.ui.setLoading(btn, true, 'Connecting Paystack...');
+                            const res = await app.httpClient.request('/wallet/fund', {
+                                method: 'POST', body: JSON.stringify({ amount })
+                            });
+                            if (res.authorization_url) window.location.href = res.authorization_url;
+                        }
+                    } catch (err) {
+                        app.toast.fire({ icon: 'error', title: err.message });
+                    } finally {
+                        app.ui.setLoading(btn, false, 'Fund via Paystack');
+                    }
+                },
+
+                async withdrawFunds(btn) {
+                    try {
+                        const { value, isConfirmed } = await Swal.fire({
+                            title: 'Withdraw Earnings', 
+                            html: `
+                                <input type="number" id="w-amount" class="swal2-input bg-surface text-white border-gray-700 placeholder-gray-500" placeholder="Amount (₦)">
+                                <input type="password" id="w-pin" class="swal2-input bg-surface text-white border-gray-700 placeholder-gray-500" placeholder="4-Digit PIN" maxlength="4">
+                            `,
+                            showCancelButton: true, background: '#1B1B1B', color: '#F5F5F5', confirmButtonColor: '#E67E22',
+                            preConfirm: () => {
+                                const amount = document.getElementById('w-amount').value;
+                                const pin = document.getElementById('w-pin').value;
+                                if (!amount || !pin || pin.length !== 4) Swal.showValidationMessage('Enter valid amount and 4-digit PIN');
+                                return { amount, pin };
+                            }
+                        });
+
+                        if (isConfirmed && value) {
+                            app.ui.setLoading(btn, true, 'Processing...');
+                            await app.httpClient.request('/wallet/withdraw', {
+                                method: 'POST', body: JSON.stringify(value)
+                            });
+                            app.toast.fire({ icon: 'success', title: 'Withdrawal Initiated' });
+                            this.fetchWalletData();
+                        }
+                    } catch (err) {
+                        app.toast.fire({ icon: 'error', title: err.message });
+                    } finally {
+                        app.ui.setLoading(btn, false, 'Withdraw to Bank');
+                    }
+                },
+
+                // Social Actions
+                async toggleFavorite(seriesId, btn) {
+                    app.ui.setLoading(btn, true, '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>');
+                    try {
+                        await app.httpClient.request('/favorites/toggle', {
+                            method: 'POST', body: JSON.stringify({ seriesId })
+                        });
+                        app.toast.fire({ icon: 'success', title: 'Library Updated' });
+                        this.fetchListsData();
+                    } catch(err) { app.toast.fire({ icon: 'error', title: err.message }); }
+                    finally { app.ui.setLoading(btn, false, '<i data-lucide="plus"></i>'); lucide.createIcons(); }
+                },
+                async likeSeries(seriesId, btn) {
+                    app.ui.setLoading(btn, true, '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>');
+                    try {
+                        await app.httpClient.request('/series/like', {
+                            method: 'POST', body: JSON.stringify({ seriesId })
+                        });
+                        app.toast.fire({ icon: 'success', title: 'Liked!' });
+                    } catch(err) { app.toast.fire({ icon: 'error', title: err.message }); }
+                    finally { app.ui.setLoading(btn, false, '<i data-lucide="thumbs-up"></i>'); lucide.createIcons(); }
+                },
+                async shareSeries(seriesId) {
+                    try {
+                        const url = `${window.location.origin}/app.html?view=player&id=${seriesId}`;
+                        await navigator.clipboard.writeText(url);
+                        app.toast.fire({ icon: 'success', title: 'Link copied to clipboard' });
+                    } catch(err) {
+                        app.toast.fire({ icon: 'error', title: 'Failed to copy link' });
+                    }
+                },
+                
+                async togglePushNotifications(btn) {
+                    app.ui.setLoading(btn, true, '...');
+                    try {
+                        await app.httpClient.request('/settings/push', { method: 'POST' });
+                        app.toast.fire({ icon: 'success', title: 'Preferences Saved' });
+                    } catch (e) { app.toast.fire({ icon: 'error', title: 'Update failed' }); }
+                    finally { app.ui.setLoading(btn, false, 'Enable'); }
+                },
+                async updateLanguage(lang) {
+                    try {
+                        await app.httpClient.request('/settings/language', { method: 'POST', body: JSON.stringify({ language: lang }) });
+                        app.toast.fire({ icon: 'success', title: 'Language Updated' });
+                    } catch (e) { app.toast.fire({ icon: 'error', title: 'Update failed' }); }
+                }
+            },
+
+            // --- VIDEO PLAYER ENIGNE ---
+            player: {
+                hls: null,
+                videoElem: null,
+                currentEpisodeId: null,
+                lastSavedTime: 0,
+                saveTimeout: null,
+
+                init() {
+                    this.videoElem = document.getElementById('hls-player');
+                    
+                    // Throttled Progress tracking (Every 15s max)
+                    this.videoElem.addEventListener('timeupdate', () => {
+                        if (!this.currentEpisodeId || this.videoElem.paused) return;
+                        
+                        const currentTime = this.videoElem.currentTime;
+                        if (Math.abs(currentTime - this.lastSavedTime) >= 15) {
+                            this.saveProgress(this.currentEpisodeId, currentTime);
+                            this.lastSavedTime = currentTime;
+                        }
+                    });
+
+                    // Cleanup when ended
+                    this.videoElem.addEventListener('ended', () => {
+                        if (this.currentEpisodeId) this.saveProgress(this.currentEpisodeId, this.videoElem.currentTime, true);
+                    });
+                },
+
+                saveProgress(episodeId, position, completed = false) {
+                    if(this.saveTimeout) clearTimeout(this.saveTimeout);
+                    this.saveTimeout = setTimeout(() => {
+                        app.httpClient.request('/history/progress', {
+                            method: 'POST',
+                            body: JSON.stringify({ episodeId, position, completed })
+                        }).catch(() => {}); // silent fail
+                    }, 1000); // 1s debounce
+                },
+
+                async openSeries(seriesId, pushHistory = true) {
+                    app.state.content.currentSeriesId = seriesId;
+                    app.nav.go('player', pushHistory);
+                    
+                    const errContainer = document.getElementById('player-meta-error');
+                    const contentContainer = document.getElementById('player-meta-content');
+                    
+                    contentContainer.classList.add('d-none');
+                    errContainer.classList.remove('d-none');
+                    errContainer.innerHTML = `<div class="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto"></div>`;
+
+                    try {
+                        const data = await app.httpClient.request(`/series/${seriesId}`);
+                        errContainer.classList.add('d-none');
+                        contentContainer.classList.remove('d-none');
+
+                        document.getElementById('series-title').innerText = app.ui.escapeHTML(data.title);
+                        document.getElementById('series-meta-match').innerText = `${app.ui.escapeHTML((data.rating || 90).toString())}% Match`;
+                        document.getElementById('series-meta-year').innerText = app.ui.escapeHTML((data.releaseYear || new Date().getFullYear()).toString());
+                        document.getElementById('series-meta-episodes').innerText = `${app.ui.escapeHTML((data.totalEpisodes || 0).toString())} Episodes`;
+                        document.getElementById('series-desc').innerText = app.ui.escapeHTML(data.description || '');
+                        
+                        // Populate Season Selector dynamically
+                        const seasonSelect = document.getElementById('season-selector');
+                        if (data.seasons && data.seasons.length > 0) {
+                            seasonSelect.innerHTML = data.seasons.map((s, i) => `<option value="${s.id || i+1}">${app.ui.escapeHTML(s.name || 'Season ' + (i+1))}</option>`).join('');
+                            this.loadSeason(data.seasons[0].id || 1);
+                        } else {
+                            seasonSelect.innerHTML = `<option value="1">Season 1</option>`;
+                            this.loadSeason(1);
+                        }
+                    } catch (err) {
+                        errContainer.innerHTML = app.ui.getRetryStateHtml('Failed to load series details', `app.player.openSeries('${seriesId}', false)`);
+                    }
+                },
+
+                async loadSeason(seasonId) {
+                    const listContainer = document.getElementById('episodes-list');
+                    listContainer.innerHTML = `<div class="skeleton h-24 w-full rounded-xl"></div><div class="skeleton h-24 w-full rounded-xl mt-4"></div>`;
+                    
+                    try {
+                        const episodes = await app.httpClient.request(`/series/${app.state.content.currentSeriesId}/episodes?season=${seasonId}`);
+                        if(!episodes || episodes.length === 0) {
+                            listContainer.innerHTML = app.ui.getEmptyStateHtml('No Episodes Yet', 'Content for this season will drop soon.', 'film');
+                            return;
+                        }
+
+                        let html = '';
+                        episodes.forEach((ep, index) => {
+                            const isLocked = !ep.isFree && !ep.unlocked;
+                            const action = isLocked ? `app.paywall.showModal('${ep._id}', ${ep.coinCost})` : `app.player.play('${ep._id}', '${ep.mediaUrl}', ${ep.lastPosition || 0})`;
+                            const lockUI = isLocked ? `
+                                <div class="w-32 h-20 bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+                                    <i data-lucide="lock" class="w-6 h-6 text-accent"></i>
+                                </div>
+                            ` : `
+                                <div class="w-32 h-20 bg-gray-700 rounded-lg overflow-hidden relative shrink-0">
+                                    <img src="${ep.thumbnail || ''}" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                                    <i data-lucide="play" class="absolute inset-0 m-auto w-8 h-8 text-white z-10 drop-shadow-lg"></i>
+                                </div>
+                            `;
+                            const lockBadge = isLocked ? `<span class="ml-2 bg-gray-800 text-accent text-[10px] px-2 py-0.5 rounded-full font-bold">Locked</span>` : '';
+
+                            html += `
+                                <div class="flex items-center space-x-4 p-4 bg-surface rounded-xl hover:bg-gray-800 transition-colors cursor-pointer ${isLocked?'opacity-75':'border-l-4 border-accent focus-ring'}" tabindex="0" onclick="${action}">
+                                    <h2 class="text-2xl font-bold text-gray-600 w-8 text-center shrink-0">${index + 1}</h2>
+                                    ${lockUI}
+                                    <div class="flex-1 min-w-0">
+                                        <h4 class="font-bold text-white flex items-center truncate">${app.ui.escapeHTML(ep.title)} ${lockBadge}</h4>
+                                        <p class="text-sm text-gray-400 line-clamp-1">${app.ui.escapeHTML(ep.description || '')}</p>
+                                    </div>
+                                    <span class="text-xs font-bold text-gray-500 hidden sm:block shrink-0">${ep.duration || '00:00'}</span>
+                                </div>
+                            `;
+                        });
+                        listContainer.innerHTML = html;
+                        lucide.createIcons();
+                    } catch (err) {
+                        listContainer.innerHTML = app.ui.getRetryStateHtml('Failed to load episodes', `app.player.loadSeason('${seasonId}')`);
+                    }
+                },
+
+                play(episodeId, mediaUrl, startTime = 0) {
+                    this.currentEpisodeId = episodeId;
+                    this.lastSavedTime = startTime;
+                    document.getElementById('video-overlay').classList.add('d-none');
+                    
+                    // Secure URL simulation (assuming backend returns signed URL)
+                    const secureUrl = mediaUrl;
+
+                    if (Hls.isSupported() && secureUrl.includes('.m3u8')) {
+                        if(this.hls) this.hls.destroy();
+                        this.hls = new Hls({ maxBufferLength: 30 });
+                        this.hls.loadSource(secureUrl);
+                        this.hls.attachMedia(this.videoElem);
+                        this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                            this.videoElem.currentTime = startTime;
+                            this.videoElem.play().catch(e => console.log('Autoplay blocked', e));
+                        });
+                        this.hls.on(Hls.Events.ERROR, (event, data) => {
+                            if (data.fatal) {
+                                switch (data.type) {
+                                    case Hls.ErrorTypes.NETWORK_ERROR:
+                                        this.hls.startLoad();
+                                        break;
+                                    case Hls.ErrorTypes.MEDIA_ERROR:
+                                        this.hls.recoverMediaError();
+                                        break;
+                                    default:
+                                        this.hls.destroy();
+                                        break;
+                                }
+                            }
+                        });
+                    } else {
+                        // Native fallback (Safari) or standard mp4
+                        this.videoElem.src = secureUrl;
+                        this.videoElem.currentTime = startTime;
+                        this.videoElem.play().catch(e => console.log('Autoplay blocked', e));
+                    }
+                    
+                    this.videoElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                },
+
+                close() {
+                    if (this.currentEpisodeId) {
+                        this.saveProgress(this.currentEpisodeId, this.videoElem.currentTime);
+                    }
+                    if (this.videoElem) {
+                        this.videoElem.pause();
+                        this.videoElem.src = "";
+                        this.videoElem.removeAttribute('src');
+                    }
+                    if (this.hls) {
+                        this.hls.destroy();
+                        this.hls = null;
+                    }
+                    document.getElementById('video-overlay').classList.remove('d-none');
+                    this.currentEpisodeId = null;
+                    this.lastSavedTime = 0;
+                }
+            },
+
+            // --- PAYWALL / ACTIONS ---
+            paywall: {
+                showModal(episodeId, cost) {
+                    Swal.fire({
+                        title: 'Premium Episode',
+                        html: `
+                            <div class="text-gray-300 text-sm mb-4">Choose how you want to unlock this content.</div>
+                            <div class="space-y-3">
+                                <button onclick="app.paywall.process('${episodeId}', 'coin')" class="w-full bg-accent text-background font-bold py-3 rounded-lg flex items-center justify-center space-x-2 focus-ring">
+                                    <i data-lucide="coins" class="w-5 h-5"></i><span>Unlock for ${cost || 10} Coins</span>
+                                </button>
+                                <button onclick="app.paywall.process('${episodeId}', 'ad')" class="w-full bg-gray-800 text-white font-bold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-600 focus-ring">
+                                    <i data-lucide="play-square" class="w-5 h-5 text-action"></i><span>Watch Ad to Unlock</span>
+                                </button>
+                            </div>
+                        `,
+                        showConfirmButton: false, showCancelButton: true, cancelButtonText: 'Cancel',
+                        background: '#1B1B1B', color: '#F5F5F5', customClass: { popup: 'border border-gray-700 rounded-2xl' },
+                        didOpen: () => { lucide.createIcons(); }
+                    });
+                },
+                async process(episodeId, method) {
+                    Swal.close();
+                    try {
+                        if (method === 'ad') {
+                            app.toast.fire({ icon: 'info', title: 'Playing Rewarded Ad...' });
+                            // Simulate Ad completion wait before API call
+                            await new Promise(res => setTimeout(res, 2000));
+                        }
+                        
+                        await app.httpClient.request(`/episodes/unlock/${method}`, {
+                            method: 'POST', body: JSON.stringify({ episodeId })
+                        });
+                        
+                        app.toast.fire({ icon: 'success', title: 'Episode Unlocked!' });
+                        // Refresh wallet & episodes
+                        app.api.fetchWalletData();
+                        app.player.loadSeason(document.getElementById('season-selector').value);
+                    } catch (err) {
+                        app.toast.fire({ icon: 'error', title: err.message });
+                    }
+                }
+            },
+
+            // --- UI HELPERS ---
+            ui: {
+                escapeHTML(str) {
+                    if (typeof str !== 'string') return str;
+                    const div = document.createElement('div');
+                    div.innerText = str;
+                    return div.innerHTML;
+                },
+
+                setLoading(btn, isLoading, originalHtml) {
+                    if (!btn) return;
+                    btn.disabled = isLoading;
+                    if (isLoading) {
+                        btn.innerHTML = `<span class="animate-pulse">${originalHtml}</span>`;
+                    } else {
+                        btn.innerHTML = originalHtml;
+                    }
+                },
+
+                hydrateUserUI() {
+                    const u = app.state.user;
+                    if(!u) return;
+                    
+                    const init = u.username ? app.ui.escapeHTML(u.username.charAt(0).toUpperCase()) : '?';
+                    
+                    // Profile Page
+                    document.getElementById('profile-username').value = app.ui.escapeHTML(u.username || '');
+                    document.getElementById('profile-email').value = app.ui.escapeHTML(u.email || '');
+                    if (u.avatarUrl) {
+                        document.getElementById('profile-avatar-img').src = u.avatarUrl;
+                        document.getElementById('profile-avatar-img').classList.remove('d-none');
+                        document.getElementById('profile-avatar-fallback').classList.add('d-none');
+                        
+                        document.getElementById('ui-avatar').src = u.avatarUrl;
+                        document.getElementById('ui-avatar').classList.remove('d-none');
+                        document.getElementById('ui-avatar-fallback').classList.add('d-none');
+                    } else {
+                        document.getElementById('profile-avatar-fallback').innerText = init;
+                        document.getElementById('ui-avatar-fallback').innerText = init;
+                    }
+
+                    // Headers & Badges
+                    document.getElementById('ui-username').innerText = `@${app.ui.escapeHTML(u.username)}`;
+                    document.getElementById('ui-badge').innerText = app.ui.escapeHTML(u.role || 'Member');
+                    document.getElementById('studio-brand').innerText = app.ui.escapeHTML(u.brandName || (u.username + ' STUDIO'));
+                },
+
+                getEmptyStateHtml(title, desc, icon = "film") {
+                    return `
+                        <div class="text-center py-20 text-gray-500 w-full col-span-full">
+                            <i data-lucide="${icon}" class="w-16 h-16 mx-auto mb-4 opacity-50"></i>
+                            <h3 class="text-xl font-bold text-gray-300">${title}</h3>
+                            <p>${desc}</p>
+                        </div>
+                    `;
+                },
+
+                getRetryStateHtml(message, retryFunc) {
+                    return `
+                        <div class="text-center py-10 text-gray-500 w-full col-span-full">
+                            <i data-lucide="alert-triangle" class="w-12 h-12 mx-auto mb-4 text-danger opacity-80"></i>
+                            <h3 class="text-lg font-bold text-gray-300 mb-2">${message}</h3>
+                            <button onclick="${retryFunc}" class="bg-gray-800 text-white px-4 py-2 rounded-lg text-sm border border-gray-600 hover:bg-gray-700 focus-ring">Try Again</button>
+                        </div>
+                    `;
+                },
+
+                renderGrid(containerId, items, allowEmpty = true, emptyTitle = "Nothing found", emptyIcon = "film") {
+                    const container = document.getElementById(containerId);
+                    if(!items || items.length === 0) {
+                        if(allowEmpty) container.innerHTML = this.getEmptyStateHtml(emptyTitle, "", emptyIcon);
+                        return;
+                    }
+                    
+                    let html = '';
+                    items.forEach(item => {
+                        let badgeColor = item.access === "Premium" ? "bg-black/80 text-accent border border-accent/30" : "bg-action text-white";
+                        let accessBadge = item.access ? `<div class="absolute top-2 right-2 ${badgeColor} px-2 py-1 rounded text-[10px] font-bold shadow-lg">${app.ui.escapeHTML(item.access)}</div>` : '';
+                        
+                        html += `
+                            <div class="min-w-[160px] md:min-w-[200px] cursor-pointer group focus-ring rounded-xl outline-none" tabindex="0" onclick="app.player.openSeries('${item._id}')" aria-label="Play ${app.ui.escapeHTML(item.title)}">
+                                <div class="h-64 bg-gray-800 rounded-xl overflow-hidden mb-2 relative">
+                                    <img src="${item.coverImage || item.img}" loading="lazy" alt="${app.ui.escapeHTML(item.title)} cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform" onerror="this.src='https://images.unsplash.com/photo-1604028297235-db715019a844?q=80&w=400&auto=format&fit=crop'">
+                                    ${accessBadge}
+                                </div>
+                                <h4 class="font-bold text-white line-clamp-1 group-hover:text-accent transition-colors" title="${app.ui.escapeHTML(item.title)}">${app.ui.escapeHTML(item.title)}</h4>
+                                <p class="text-xs text-gray-500">${app.ui.escapeHTML(item.type || 'Series')}</p>
+                            </div>
+                        `;
+                    });
+                    container.innerHTML = html;
+                    lucide.createIcons();
+                },
+
+                filterTx(type) {
+                    const btns = document.querySelectorAll('#tx-filters button');
+                    btns.forEach(b => {
+                        if(b.innerText.toUpperCase() === type || (type === 'ALL' && b.innerText === 'All') || (type === 'CREDIT' && b.innerText === 'Incoming') || (type === 'DEBIT' && b.innerText === 'Outgoing')){
+                            b.classList.replace('text-gray-500', 'text-accent');
+                            b.classList.add('font-bold');
+                        } else {
+                            b.classList.replace('text-accent', 'text-gray-500');
+                            b.classList.remove('font-bold');
+                        }
+                    });
+
+                    let data = app.state.content.txHistory || [];
+                    if (type === 'CREDIT') data = data.filter(t => t.type === 'FUND' || t.type === 'AD_REWARD' || t.type === 'PAYOUT_CREDIT');
+                    if (type === 'DEBIT') data = data.filter(t => t.type === 'SPEND' || t.type === 'WITHDRAW');
+                    this.renderTransactions(data);
+                },
+
+                renderTransactions(history) {
+                    const container = document.getElementById('transaction-history');
+                    if (!history || history.length === 0) {
+                        container.innerHTML = this.getEmptyStateHtml("No transactions found", "Your financial history is empty.", "file-text");
+                        return;
+                    }
+                    let html = '<div class="divide-y divide-gray-800">';
+                    history.slice(0, 50).forEach(tx => { // Simple pagination/limit
+                        const isCredit = tx.type === 'FUND' || tx.type === 'AD_REWARD' || tx.type === 'PAYOUT_CREDIT';
+                        const color = isCredit ? 'text-success' : 'text-danger';
+                        const sign = isCredit ? '+' : '-';
+                        html += `
+                            <div class="p-4 flex justify-between items-center hover:bg-gray-800/50 transition-colors">
+                                <div class="flex items-center space-x-4">
+                                    <div class="bg-gray-800 p-2 rounded-lg shrink-0"><i data-lucide="${isCredit ? 'arrow-down-left' : 'arrow-up-right'}" class="w-5 h-5 ${color}"></i></div>
+                                    <div>
+                                        <p class="font-bold text-white text-sm">${app.ui.escapeHTML(tx.type)}</p>
+                                        <p class="text-xs text-gray-500">${new Date(tx.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right shrink-0">
+                                    <p class="font-bold ${color}">${sign}${app.ui.escapeHTML(tx.amount?.toString() || '0')}</p>
+                                    <p class="text-[10px] text-gray-500 truncate w-24 sm:w-auto">Ref: ${app.ui.escapeHTML(tx.reference || 'N/A')}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                    lucide.createIcons();
+                }
+            },
+
+            // --- SEARCH SYSTEM ---
+            search: {
+                controller: null,
+                timeout: null,
+                init() {
+                    const input = document.getElementById('search-input');
+                    input.addEventListener('input', (e) => {
+                        clearTimeout(this.timeout);
+                        const val = e.target.value.toLowerCase().trim();
+                        const emptyState = document.getElementById('search-empty-state');
+                        const resultsGrid = document.getElementById('search-results-grid');
+                        
+                        if(val.length < 2) {
+                            emptyState.classList.remove('d-none');
+                            resultsGrid.classList.add('d-none');
+                            emptyState.innerHTML = app.ui.getEmptyStateHtml("Discover New Stories", "Type above to search the library.", "search");
+                            if(this.controller) this.controller.abort();
+                            return;
+                        }
+
+                        // Show Loading UI
+                        emptyState.classList.remove('d-none');
+                        resultsGrid.classList.add('d-none');
+                        emptyState.innerHTML = `<div class="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p>Searching...</p>`;
+                        
+                        this.timeout = setTimeout(() => {
+                            if(this.controller) this.controller.abort();
+                            this.controller = new AbortController();
+                            app.api.executeSearch(val, this.controller.signal);
+                        }, 500); // 500ms debounce
+                    });
+                }
+            },
+
+            init() {
+                this.initNetworkMonitor();
+                this.nav.initListener();
+                this.search.init();
+                this.player.init();
+                this.auth.fetchMe();
+            }
+        };
+
+        // Boot Application
+        document.addEventListener('DOMContentLoaded', () => { app.init(); });
     </script>
 </body>
 </html>
