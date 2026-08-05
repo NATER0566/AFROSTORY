@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AfroStory | Premium Digital Storytelling</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SweetAlert2 for Enterprise Popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Tailwind CSS (Configured to AfroStory PRD Colors) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        background: '#111111',
+                        surface: '#1B1B1B',
+                        primary: '#F5F5F5',
+                        accent: '#D4A017',
+                        action: '#E67E22',
+                        success: '#2ECC71'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Smooth fade transitions for switching forms */
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111111; }
+        ::-webkit-scrollbar-thumb { background: #1B1B1B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D4A017; }
+    </style>
+</head>
+<body class="bg-background text-primary font-sans antialiased min-h-screen flex items-center justify-center p-4">
+
+    <!-- Auth Container -->
+    <div class="w-full max-w-md bg-surface border border-gray-800 rounded-2xl shadow-2xl p-8 relative overflow-hidden">
+        
+        <!-- Subtle Gold Glow Effect -->
+        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-32 h-2 bg-accent rounded-b-full shadow-[0_0_30px_#D4A017] opacity-50"></div>
+
+        <!-- Logo Area -->
+        <div class="text-center mb-8 mt-2">
+            <h1 class="text-3xl font-bold tracking-wider text-primary">AFRO<span class="text-accent">STORY</span></h1>
+            <p class="text-sm text-gray-400 mt-2">Premium Digital Storytelling</p>
+        </div>
+
+        <!-- ================= LOGIN FORM ================= -->
+        <form id="login-form" class="fade-in space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                <input type="email" id="login-email" required autocomplete="email"
+                    class="w-full bg-background border border-gray-700 rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                <input type="password" id="login-password" required autocomplete="current-password"
+                    class="w-full bg-background border border-gray-700 rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors">
+            </div>
+            
+            <button type="submit" id="login-btn"
+                class="w-full bg-action hover:bg-orange-600 text-white font-semibold py-3 rounded-lg shadow-[0_4px_15px_rgba(230,126,34,0.3)] transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                Sign In
+            </button>
+
+            <div class="text-center mt-6">
+                <p class="text-sm text-gray-400">New to AfroStory? 
+                    <a href="#" onclick="toggleAuthMode('register')" class="text-accent hover:text-white font-semibold transition-colors">Create an account</a>
+                </p>
+            </div>
+        </form>
+
+        <!-- ================= REGISTER FORM (Hidden by Default) ================= -->
+        <form id="register-form" class="hidden fade-in space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Username</label>
+                <input type="text" id="reg-username" required autocomplete="username" minlength="3"
+                    class="w-full bg-background border border-gray-700 rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                <input type="email" id="reg-email" required autocomplete="email"
+                    class="w-full bg-background border border-gray-700 rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                <input type="password" id="reg-password" required autocomplete="new-password" minlength="6"
+                    class="w-full bg-background border border-gray-700 rounded-lg px-4 py-3 text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-colors">
+            </div>
+            
+            <button type="submit" id="register-btn"
+                class="w-full bg-accent hover:bg-yellow-600 text-background font-bold py-3 rounded-lg shadow-[0_4px_15px_rgba(212,160,23,0.3)] transition-all transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                Create Secure Account
+            </button>
+
+            <div class="text-center mt-6">
+                <p class="text-sm text-gray-400">Already have an account? 
+                    <a href="#" onclick="toggleAuthMode('login')" class="text-action hover:text-white font-semibold transition-colors">Sign In</a>
+                </p>
+            </div>
+        </form>
+
+    </div>
+
+    <!-- ================= INLINE VANILLA JS ENGINE ================= -->
+    <script>
+        // UI TOGGLING (SPA EXPERIENCE)
+        function toggleAuthMode(mode) {
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+
+            if (mode === 'register') {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+            } else {
+                registerForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+            }
+        }
+
+        // CUSTOM SWEETALERT CONFIGURATION
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            background: '#1B1B1B',
+            color: '#F5F5F5',
+            iconColor: '#D4A017'
+        });
+
+        // HANDLE LOGIN
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const btn = document.getElementById('login-btn');
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-pulse">Authenticating...</span>`;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', // CRITICAL: Allows HttpOnly cookies to be received
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    Toast.fire({ icon: 'success', title: 'Login successful! Redirecting...' });
+                    setTimeout(() => { window.location.href = '/app.html'; }, 1000);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Access Denied',
+                        text: data.message || 'Invalid credentials.',
+                        background: '#1B1B1B',
+                        color: '#F5F5F5',
+                        confirmButtonColor: '#E67E22'
+                    });
+                    btn.disabled = false;
+                    btn.innerHTML = `Sign In`;
+                }
+            } catch (error) {
+                console.error('Login Error:', error);
+                Toast.fire({ icon: 'error', title: 'Network error. Check connection.' });
+                btn.disabled = false;
+                btn.innerHTML = `Sign In`;
+            }
+        });
+
+        // HANDLE REGISTRATION
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+            const btn = document.getElementById('register-btn');
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-pulse">Creating Vault...</span>`;
+
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', // CRITICAL: Allows HttpOnly cookies to be received
+                    body: JSON.stringify({ username, email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    Toast.fire({ icon: 'success', title: 'Account created! Redirecting...' });
+                    setTimeout(() => { window.location.href = '/app.html'; }, 1500);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Registration Failed',
+                        text: data.message || 'Could not create account.',
+                        background: '#1B1B1B',
+                        color: '#F5F5F5',
+                        confirmButtonColor: '#E67E22'
+                    });
+                    btn.disabled = false;
+                    btn.innerHTML = `Create Secure Account`;
+                }
+            } catch (error) {
+                console.error('Registration Error:', error);
+                Toast.fire({ icon: 'error', title: 'Network error. Check connection.' });
+                btn.disabled = false;
+                btn.innerHTML = `Create Secure Account`;
+            }
+        });
+    </script>
+</body>
+</html>
