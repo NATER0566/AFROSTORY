@@ -30,8 +30,10 @@ const fastify = Fastify({
 // 1. REGISTER ENTERPRISE MIDDLEWARE
 // ==========================================
 
-// Security headers (Helmet)
-fastify.register(fastifyHelmet, { global: true });
+// Security headers (Helmet) - Modified to allow frontend CSS and JS
+fastify.register(fastifyHelmet, {
+  contentSecurityPolicy: false
+});
 
 // CORS (Cross-Origin Resource Sharing)
 fastify.register(fastifyCors, {
