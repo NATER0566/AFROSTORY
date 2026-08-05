@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | AfroStory</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SweetAlert2 for Enterprise Popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        background: '#111111',
+                        surface: '#1B1B1B',
+                        primary: '#F5F5F5',
+                        accent: '#D4A017',
+                        action: '#E67E22',
+                        success: '#2ECC71'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .fade-in { animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111111; }
+        ::-webkit-scrollbar-thumb { background: #1B1B1B; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #D4A017; }
+    </style>
+</head>
+<body class="bg-background text-primary font-sans antialiased h-screen flex overflow-hidden">
+
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="w-64 bg-surface border-r border-gray-800 flex flex-col justify-between hidden md:flex">
+        <div>
+            <!-- Logo -->
+            <div class="h-20 flex items-center justify-center border-b border-gray-800 shadow-[0_4px_30px_rgba(212,160,23,0.05)]">
+                <h1 class="text-2xl font-bold tracking-wider text-primary">AFRO<span class="text-accent">STORY</span></h1>
+            </div>
+            
+            <!-- Navigation Links -->
+            <nav class="p-4 space-y-2 mt-4">
+                <a href="#" class="flex items-center space-x-3 bg-gray-800/50 text-accent px-4 py-3 rounded-lg border border-gray-700 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                    <span class="font-semibold">Dashboard</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-3 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    <span class="font-semibold">My Stories</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 text-gray-400 hover:text-white hover:bg-gray-800/30 px-4 py-3 rounded-lg transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
+                    <span class="font-semibold">Wallet</span>
+                </a>
+            </nav>
+        </div>
+
+        <!-- Logout Section -->
+        <div class="p-4 border-t border-gray-800">
+            <button onclick="handleLogout()" class="w-full flex items-center justify-center space-x-2 bg-red-900/20 text-red-400 hover:bg-red-900/40 hover:text-red-300 px-4 py-3 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                <span class="font-semibold">Secure Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- ================= MAIN CONTENT ================= -->
+    <main class="flex-1 flex flex-col bg-background overflow-y-auto">
+        
+        <!-- Top Navigation -->
+        <header class="h-20 bg-surface border-b border-gray-800 flex items-center justify-between px-8 sticky top-0 z-10">
+            <h2 class="text-xl font-bold text-primary">Overview</h2>
+            
+            <div class="flex items-center space-x-4">
+                <div class="w-10 h-10 rounded-full bg-accent text-background flex items-center justify-center font-bold text-lg border-2 border-action shadow-[0_0_15px_rgba(212,160,23,0.3)]">
+                    <span id="avatar-initial">A</span>
+                </div>
+                <div class="hidden md:block text-sm">
+                    <p class="text-gray-300 font-semibold" id="display-username">Loading User...</p>
+                    <p class="text-xs text-success">Online & Secure</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Body -->
+        <div class="p-8 fade-in">
+            <!-- Welcome Banner -->
+            <div class="bg-surface border border-gray-800 rounded-2xl p-8 mb-8 relative overflow-hidden shadow-xl">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-accent rounded-full filter blur-[100px] opacity-10"></div>
+                <h3 class="text-3xl font-bold mb-2 text-primary">Welcome to your vault, <span id="welcome-name" class="text-accent">Creator</span>.</h3>
+                <p class="text-gray-400 max-w-2xl text-lg">Your engine is live, fully connected to MongoDB, and strictly secured. Ready to build the future of digital storytelling.</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- Stat Card 1 -->
+                <div class="bg-surface border border-gray-800 p-6 rounded-xl shadow-lg transform transition-transform hover:-translate-y-1">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-gray-400 font-semibold">Total Stories</h4>
+                        <div class="bg-blue-900/30 p-2 rounded-lg text-blue-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                        </div>
+                    </div>
+                    <p class="text-3xl font-bold text-primary">0</p>
+                </div>
+                <!-- Stat Card 2 -->
+                <div class="bg-surface border border-gray-800 p-6 rounded-xl shadow-lg transform transition-transform hover:-translate-y-1">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-gray-400 font-semibold">Wallet Balance</h4>
+                        <div class="bg-green-900/30 p-2 rounded-lg text-green-400">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        </div>
+                    </div>
+                    <p class="text-3xl font-bold text-primary">₦0.00</p>
+                </div>
+                <!-- Stat Card 3 -->
+                <div class="bg-surface border border-gray-800 p-6 rounded-xl shadow-lg transform transition-transform hover:-translate-y-1">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-gray-400 font-semibold">Active Readers</h4>
+                        <div class="bg-orange-900/30 p-2 rounded-lg text-action">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                        </div>
+                    </div>
+                    <p class="text-3xl font-bold text-primary">0</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- ================= DASHBOARD ENGINE LOGIC ================= -->
+    <script>
+        // Custom SweetAlert Configuration for the Dashboard
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true,
+            background: '#1B1B1B',
+            color: '#F5F5F5',
+            iconColor: '#D4A017'
+        });
+
+        // Simulating User Authentication State
+        // In a full production flow, this would fetch from /api/auth/me
+        document.addEventListener('DOMContentLoaded', () => {
+            // Check if there is a cached username (from registration)
+            // For now, we will dynamically update the UI to show the system is alive
+            const systemUser = "Authenticated User";
+            
+            document.getElementById('display-username').innerText = systemUser;
+            document.getElementById('welcome-name').innerText = systemUser;
+            document.getElementById('avatar-initial').innerText = systemUser.charAt(0).toUpperCase();
+
+            Toast.fire({
+                icon: 'success',
+                title: 'Vault Decrypted & Connected'
+            });
+        });
+
+        // Secure Logout Handler
+        function handleLogout() {
+            Swal.fire({
+                title: 'Lock Vault?',
+                text: "You will be signed out of AfroStory.",
+                icon: 'warning',
+                showCancelButton: true,
+                background: '#1B1B1B',
+                color: '#F5F5F5',
+                confirmButtonColor: '#E67E22',
+                cancelButtonColor: '#374151',
+                confirmButtonText: 'Yes, secure it.'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Send request to backend to destroy cookie
+                    fetch('/api/auth/logout', { method: 'POST' })
+                    .then(() => {
+                        window.location.href = '/index.html';
+                    })
+                    .catch(err => {
+                        console.error('Logout error:', err);
+                        window.location.href = '/index.html';
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+</html>
