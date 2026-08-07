@@ -29,9 +29,28 @@ const userSchema = new mongoose.Schema({
   },
   role: { 
     type: String, 
-    enum: ['USER', 'CREATOR', 'ADMIN'], 
+    enum: ['USER', 'CREATOR', 'ADMIN', 'OWNER'], 
     default: 'USER' 
   },
+  // --- NEW: Regional Monetization Engine ---
+  country: {
+    type: String,
+    default: 'UNKNOWN' // Will be auto-populated by IP (e.g., 'NG')
+  },
+  // --- NEW: OTP Verification Engine ---
+  isVerified: {
+    type: Boolean,
+    default: false
+  },
+  otpCode: {
+    type: String,
+    select: false // Hidden from normal queries
+  },
+  otpExpiry: {
+    type: Date,
+    select: false // Hidden from normal queries
+  },
+  // ----------------------------------------
   adUnlocksRemaining: { 
     type: Number, 
     default: 3, 
