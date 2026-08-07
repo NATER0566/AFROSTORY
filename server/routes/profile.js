@@ -1,20 +1,26 @@
 import User from '../models/User.js';
 import { requireAuth } from '../middleware/auth.js';
 import { v2 as cloudinary } from 'cloudinary';
-import streamifier from 'streamifier'; // <-- THE NATER-PAY FIX
+import streamifier from 'streamifier';
 import bcrypt from 'bcryptjs';
+
+// ==========================================
+// THE FIX: ADDING YOUR CLOUDINARY KEYS HERE
+// ==========================================
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 export default async function profileRoutes(fastify, options) {
 
-  // ==========================================
-  // 1. INSTANT AVATAR UPLOAD (BUFFER METHOD)
-  // ==========================================
+  // 1. INSTANT AVATAR UPLOAD
   fastify.post('/avatar', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
       const data = await req.file();
       if (!data) return reply.code(400).send({ success: false, message: 'No file uploaded.' });
 
-      // Convert to Buffer to prevent the infinite hang!
       const fileBuffer = await data.toBuffer();
 
       const uploadPromise = new Promise((resolve, reject) => {
@@ -25,7 +31,6 @@ export default async function profileRoutes(fastify, options) {
             else resolve(result);
           }
         );
-        // Cleanly pipe the buffer to Cloudinary
         streamifier.createReadStream(fileBuffer).pipe(stream);
       });
 
@@ -44,9 +49,7 @@ export default async function profileRoutes(fastify, options) {
     }
   });
 
-  // ==========================================
   // 2. UPDATE PROFILE DETAILS
-  // ==========================================
   fastify.post('/update', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
       const { username, email, pin } = req.body;
