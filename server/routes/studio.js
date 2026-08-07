@@ -4,329 +4,563 @@ import Episode from '../models/Episode.js';
 import { requireAuth } from '../middleware/auth.js';
 import { v2 as cloudinary } from 'cloudinary';
 
-// Cloudinary configuration
+// ==========================================
+// CLOUDINARY CONFIGURATION
+// ==========================================
+
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
+cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+api_key: process.env.CLOUDINARY_API_KEY,
+api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
+// ==========================================
+// CLOUDINARY IMAGE UPLOAD
+// ==========================================
 
-// Helper function to upload a stream to Cloudinary
-function uploadToCloudinary(stream, options = {}) {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: options.folder || 'afrostory',
-        resource_type: options.resource_type || 'auto'
-      },
-      (error, result) => {
-        if (error) {
-          return reject(error);
-        }
+function uploadImageToCloudinary(stream) {
+return new Promise((resolve, reject) => {
 
-        resolve(result);
-      }
-    );
+const uploadStream = cloudinary.uploader.upload_stream(
+  {
+    folder: 'afrostory/covers',
+    resource_type: 'image'
+  },
+  (error, result) => {
 
-    stream.pipe(uploadStream);
-  });
+    if (error) {
+      return reject(error);
+    }
+
+    resolve(result);
+  }
+);
+
+stream.pipe(uploadStream);
+
+stream.on('error', (error) => {
+  reject(error);
+});
+
+uploadStream.on('error', (error) => {
+  reject(error);
+});
+
+});
 }
 
+// ==========================================
+// CLOUDINARY LARGE VIDEO UPLOAD
+// ==========================================
+// Uses Cloudinary's chunked upload stream.
+// This is better for large video files than
+// using a normal upload_stream().
+
+function uploadVideoToCloudinary(stream) {
+return new Promise((resolve, reject) => {
+
+const uploadStream = cloudinary.uploader.upload_chunked_stream(
+  {
+    folder: 'afrostory/videos',
+    resource_type: 'video',
+
+    // 20 MB chunks
+    chunk_size: 20 * 1024 * 1024
+  },
+  (error, result) => {
+
+    if (error) {
+      return reject(error);
+    }
+
+    resolve(result);
+  }
+);
+
+stream.pipe(uploadStream);
+
+stream.on('error', (error) => {
+  reject(error);
+});
+
+uploadStream.on('error', (error) => {
+  reject(error);
+});
+
+});
+}
 
 export default async function studioRoutes(fastify, options) {
 
-  // 1. Get Analytics
-  fastify.get('/analytics', { preHandler: [requireAuth] }, async (req, reply) => {
-    try {
-      if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) {
-        return reply.code(403).send({
-          success: false,
-          message: 'Unauthorized access.'
-        });
+// ==========================================
+// 1. GET ANALYTICS
+// ==========================================
+
+fastify.get('/analytics', { preHandler: [requireAuth] }, async (req, reply) => {
+
+try {
+
+  if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) {
+
+    return reply.code(403).send({
+      success: false,
+      message: 'Unauthorized access.'
+    });
+
+  }
+
+
+  // Get all series belonging to the creator
+  const seriesList = await Series.find({
+    creatorId: req.user.userId
+  }).select('_id');
+
+
+  const seriesIds = seriesList.map(s => s._id);
+
+
+  // Aggregate episode statistics
+  const stats = await Episode.aggregate([
+
+    {
+      $match: {
+        seriesId: { $in: seriesIds }
       }
+    },
 
-      // Aggregate all views/unlocks from the creator's episodes
-      const seriesList = await Series.find({
-        creatorId: req.user.userId
-      }).select('_id');
+    {
+      $group: {
 
-      const seriesIds = seriesList.map(s => s._id);
+        _id: null,
 
-      const stats = await Episode.aggregate([
-        {
-          $match: {
-            seriesId: { $in: seriesIds }
-          }
+        totalViews: {
+          $sum: "$totalViews"
         },
-        {
-          $group: {
-            _id: null,
-            totalViews: { $sum: "$totalViews" },
-            totalUnlocks: { $sum: "$totalUnlocks" },
-            totalAdUnlocks: { $sum: "$totalAdUnlocks" }
-          }
+
+        totalUnlocks: {
+          $sum: "$totalUnlocks"
+        },
+
+        totalAdUnlocks: {
+          $sum: "$totalAdUnlocks"
         }
-      ]);
 
-      const creator = await User.findById(req.user.userId)
-        .select('followers');
-
-      return reply.code(200).send({
-        success: true,
-        data: {
-          totalViews: stats[0]?.totalViews || 0,
-          followers: creator?.followers || 0,
-          totalAdUnlocks: stats[0]?.totalAdUnlocks || 0,
-          totalUnlocks: stats[0]?.totalUnlocks || 0
-        }
-      });
-
-    } catch (error) {
-      req.log.error(error);
-
-      return reply.code(500).send({
-        success: false,
-        message: 'Failed to fetch analytics.'
-      });
+      }
     }
+
+  ]);
+
+
+  const creator = await User.findById(
+    req.user.userId
+  ).select('followers');
+
+
+  return reply.code(200).send({
+
+    success: true,
+
+    data: {
+
+      totalViews:
+        stats[0]?.totalViews || 0,
+
+      followers:
+        creator?.followers || 0,
+
+      totalAdUnlocks:
+        stats[0]?.totalAdUnlocks || 0,
+
+      totalUnlocks:
+        stats[0]?.totalUnlocks || 0
+
+    }
+
+  });
+
+} catch (error) {
+
+  req.log.error(error);
+
+  return reply.code(500).send({
+
+    success: false,
+
+    message: 'Failed to fetch analytics.'
+
+  });
+
+}
+
+});
+
+// ==========================================
+// 2. GET MY UPLOADS
+// ==========================================
+
+fastify.get('/uploads', { preHandler: [requireAuth] }, async (req, reply) => {
+
+try {
+
+  if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) {
+
+    return reply.code(403).send({
+
+      success: false,
+
+      message: 'Unauthorized access.'
+
+    });
+
+  }
+
+
+  const uploads = await Series.find({
+
+    creatorId: req.user.userId
+
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+
+  return reply.code(200).send({
+
+    success: true,
+
+    data: uploads
+
+  });
+
+} catch (error) {
+
+  req.log.error(error);
+
+  return reply.code(500).send({
+
+    success: false,
+
+    message: 'Failed to fetch uploads.'
+
+  });
+
+}
+
+});
+
+// ==========================================
+// 3. SECURE MULTIPART UPLOAD
+// ==========================================
+
+fastify.post('/upload', { preHandler: [requireAuth] }, async (req, reply) => {
+
+try {
+
+  // ==========================================
+  // CHECK CREATOR PERMISSIONS
+  // ==========================================
+
+  if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) {
+
+    return reply.code(403).send({
+
+      success: false,
+
+      message: 'Only creators can upload content.'
+
+    });
+
+  }
+
+
+  // ==========================================
+  // CHECK CLOUDINARY CONFIGURATION
+  // ==========================================
+
+  if (
+    !process.env.CLOUDINARY_CLOUD_NAME ||
+    !process.env.CLOUDINARY_API_KEY ||
+    !process.env.CLOUDINARY_API_SECRET
+  ) {
+
+    req.log.error(
+      'Cloudinary environment variables are missing.'
+    );
+
+    return reply.code(500).send({
+
+      success: false,
+
+      message: 'Cloudinary is not configured on the server.'
+
+    });
+
+  }
+
+
+  const parts = req.parts();
+
+  const fields = {};
+
+
+  let coverImageUploaded = false;
+
+  let videoUploaded = false;
+
+
+  // ==========================================
+  // PROCESS MULTIPART FORM DATA
+  // ==========================================
+
+  for await (const part of parts) {
+
+    // ==========================================
+    // FILE
+    // ==========================================
+
+    if (part.type === 'file') {
+
+
+      // ==========================================
+      // COVER IMAGE
+      // ==========================================
+
+      if (part.fieldname === 'coverImage') {
+
+        const imageResult =
+          await uploadImageToCloudinary(part.file);
+
+
+        fields.coverImage =
+          imageResult.secure_url;
+
+
+        coverImageUploaded = true;
+
+      }
+
+
+      // ==========================================
+      // VIDEO
+      // ==========================================
+
+      else if (part.fieldname === 'videoFile') {
+
+        const videoResult =
+          await uploadVideoToCloudinary(part.file);
+
+
+        fields.videoFile =
+          videoResult.secure_url;
+
+
+        videoUploaded = true;
+
+      }
+
+
+      // ==========================================
+      // UNKNOWN FILE
+      // ==========================================
+
+      else {
+
+        // Consume the stream so the multipart
+        // request can continue safely.
+        part.file.resume();
+
+      }
+
+    }
+
+
+    // ==========================================
+    // NORMAL FORM FIELD
+    // ==========================================
+
+    else {
+
+      fields[part.fieldname] = part.value;
+
+    }
+
+  }
+
+
+  // ==========================================
+  // VALIDATION
+  // ==========================================
+
+  if (!fields.title) {
+
+    return reply.code(400).send({
+
+      success: false,
+
+      message: 'Title is required.'
+
+    });
+
+  }
+
+
+  if (!fields.description) {
+
+    return reply.code(400).send({
+
+      success: false,
+
+      message: 'Description is required.'
+
+    });
+
+  }
+
+
+  if (!coverImageUploaded) {
+
+    return reply.code(400).send({
+
+      success: false,
+
+      message: 'Cover image is required.'
+
+    });
+
+  }
+
+
+  if (!videoUploaded) {
+
+    return reply.code(400).send({
+
+      success: false,
+
+      message: 'Video file is required.'
+
+    });
+
+  }
+
+
+  // ==========================================
+  // VALIDATE COIN COST
+  // ==========================================
+
+  let coinCost = 0;
+
+
+  if (fields.coinCost !== undefined) {
+
+    coinCost = Number(fields.coinCost);
+
+
+    if (!Number.isFinite(coinCost) || coinCost < 0) {
+
+      return reply.code(400).send({
+
+        success: false,
+
+        message: 'Invalid coin cost.'
+
+      });
+
+    }
+
+  }
+
+
+  // ==========================================
+  // STEP 1:
+  // CREATE SERIES / MOVIE
+  // ==========================================
+
+  const newSeries = await Series.create({
+
+    creatorId: req.user.userId,
+
+    title: fields.title,
+
+    description: fields.description,
+
+    type: fields.type || 'Movie',
+
+    coverImage: fields.coverImage,
+
+    status: 'ONGOING',
+
+    totalEpisodes: 1
+
   });
 
 
-  // 2. Get My Uploads
-  fastify.get('/uploads', { preHandler: [requireAuth] }, async (req, reply) => {
-    try {
-      if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) {
-        return reply.code(403).send({
-          success: false,
-          message: 'Unauthorized access.'
-        });
-      }
+  // ==========================================
+  // STEP 2:
+  // CREATE EPISODE
+  // ==========================================
 
-      const uploads = await Series.find({
-        creatorId: req.user.userId
-      })
-        .sort({ createdAt: -1 })
-        .lean();
+  const newEpisode = await Episode.create({
 
-      return reply.code(200).send({
-        success: true,
-        data: uploads
-      });
+    seriesId: newSeries._id,
 
-    } catch (error) {
-      req.log.error(error);
+    title: fields.title,
 
-      return reply.code(500).send({
-        success: false,
-        message: 'Failed to fetch uploads.'
-      });
-    }
+    mediaUrl: fields.videoFile,
+
+    access: fields.access || 'Free',
+
+    coinCost: coinCost,
+
+    status: 'PUBLISHED'
+
   });
 
 
-  // 3. SECURE MULTIPART UPLOAD (Video & Image)
-  fastify.post('/upload', { preHandler: [requireAuth] }, async (req, reply) => {
-    try {
+  // ==========================================
+  // SUCCESS RESPONSE
+  // ==========================================
 
-      // Check creator permissions
-      if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) {
-        return reply.code(403).send({
-          success: false,
-          message: 'Only creators can upload content.'
-        });
-      }
+  return reply.code(201).send({
 
+    success: true,
 
-      const parts = req.parts();
+    message: 'Content Published!',
 
-      const fields = {};
+    data: {
 
-      let coverImageUploaded = false;
-      let videoUploaded = false;
+      seriesId: newSeries._id,
 
+      episodeId: newEpisode._id,
 
-      // Process multipart form data safely
-      for await (const part of parts) {
+      coverImage: fields.coverImage,
 
-        // ============================
-        // FILE UPLOADS
-        // ============================
-        if (part.type === 'file') {
+      videoUrl: fields.videoFile
 
-          // COVER IMAGE
-          if (part.fieldname === 'coverImage') {
-
-            const imageResult = await uploadToCloudinary(
-              part.file,
-              {
-                folder: 'afrostory/covers',
-                resource_type: 'image'
-              }
-            );
-
-            fields.coverImage = imageResult.secure_url;
-
-            coverImageUploaded = true;
-          }
-
-
-          // VIDEO FILE
-          else if (part.fieldname === 'videoFile') {
-
-            const videoResult = await uploadToCloudinary(
-              part.file,
-              {
-                folder: 'afrostory/videos',
-                resource_type: 'video'
-              }
-            );
-
-            fields.videoFile = videoResult.secure_url;
-
-            videoUploaded = true;
-          }
-
-        }
-
-
-        // ============================
-        // NORMAL FORM FIELDS
-        // ============================
-        else {
-          fields[part.fieldname] = part.value;
-        }
-      }
-
-
-      // ============================
-      // VALIDATION
-      // ============================
-
-      if (!fields.title) {
-        return reply.code(400).send({
-          success: false,
-          message: 'Title is required.'
-        });
-      }
-
-      if (!fields.description) {
-        return reply.code(400).send({
-          success: false,
-          message: 'Description is required.'
-        });
-      }
-
-      if (!coverImageUploaded) {
-        return reply.code(400).send({
-          success: false,
-          message: 'Cover image is required.'
-        });
-      }
-
-      if (!videoUploaded) {
-        return reply.code(400).send({
-          success: false,
-          message: 'Video file is required.'
-        });
-      }
-
-
-      // ============================
-      // STEP 1:
-      // CREATE THE SERIES/MOVIE PARENT
-      // ============================
-
-      const newSeries = await Series.create({
-
-        creatorId: req.user.userId,
-
-        title: fields.title,
-
-        description: fields.description,
-
-        type: fields.type || 'Movie',
-
-        coverImage: fields.coverImage,
-
-        status: 'ONGOING'
-
-      });
-
-
-      // ============================
-      // STEP 2:
-      // CREATE EPISODE/VIDEO DATA
-      // ============================
-
-      await Episode.create({
-
-        seriesId: newSeries._id,
-
-        title: fields.title,
-
-        mediaUrl: fields.videoFile,
-
-        access: fields.access || 'Free',
-
-        coinCost: fields.coinCost
-          ? Number(fields.coinCost)
-          : 0,
-
-        status: 'PUBLISHED'
-
-      });
-
-
-      // ============================
-      // STEP 3:
-      // UPDATE SERIES COUNT
-      // ============================
-
-      await Series.updateOne(
-        { _id: newSeries._id },
-        {
-          totalEpisodes: 1
-        }
-      );
-
-
-      // ============================
-      // SUCCESS RESPONSE
-      // ============================
-
-      return reply.code(201).send({
-
-        success: true,
-
-        message: 'Content Published!',
-
-        data: {
-          seriesId: newSeries._id,
-
-          coverImage: fields.coverImage,
-
-          videoUrl: fields.videoFile
-        }
-
-      });
-
-    } catch (error) {
-
-      req.log.error(error);
-
-      return reply.code(500).send({
-
-        success: false,
-
-        message: 'Upload failed.',
-
-        error: process.env.NODE_ENV === 'development'
-          ? error.message
-          : undefined
-
-      });
     }
+
   });
+
+
+} catch (error) {
+
+  req.log.error(error);
+
+
+  return reply.code(500).send({
+
+    success: false,
+
+    message: 'Upload failed.',
+
+    error:
+      process.env.NODE_ENV === 'development'
+        ? error.message
+        : undefined
+
+  });
+
+}
+
+});
 
 }
