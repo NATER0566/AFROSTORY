@@ -5,7 +5,7 @@ import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
-import fastifyMultipart from '@fastify/multipart'; // <-- ADDED: Required for Video/Image uploads
+import fastifyMultipart from '@fastify/multipart';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -49,7 +49,7 @@ fastify.register(fastifyCookie, {
   parseOptions: {}
 });
 
-// Multipart for Studio Video/Image Uploads <-- ADDED
+// Multipart for Studio Video/Image Uploads
 fastify.register(fastifyMultipart, {
   limits: {
     fileSize: 500 * 1024 * 1024 // 500MB max file size for videos
@@ -110,7 +110,7 @@ listeners.forEach((signal) => {
 });
 
 // ==========================================
-// API ROUTES
+// 5. API ROUTES
 // ==========================================
 import authRoutes from './routes/auth.js';
 fastify.register(authRoutes, { prefix: '/api/auth' });
@@ -127,15 +127,20 @@ fastify.register(episodeRoutes, { prefix: '/api/episodes' });
 import commentRoutes from './routes/comments.js';
 fastify.register(commentRoutes, { prefix: '/api/comments' });
 
-// <-- ADDED MISSING ROUTES FOR FRONTEND -->
 import profileRoutes from './routes/profile.js';
 fastify.register(profileRoutes, { prefix: '/api/profile' });
 
 import studioRoutes from './routes/studio.js';
 fastify.register(studioRoutes, { prefix: '/api/studio' });
 
+import historyRoutes from './routes/history.js';
+fastify.register(historyRoutes, { prefix: '/api/history' });
+
+import favoriteRoutes from './routes/favorites.js';
+fastify.register(favoriteRoutes, { prefix: '/api/favorites' });
+
 // ==========================================
-// 5. BOOTSTRAP SERVER
+// 6. BOOTSTRAP SERVER
 // ==========================================
 const startServer = async () => {
   try {
