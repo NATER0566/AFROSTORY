@@ -162,7 +162,7 @@
             <!-- ================= VIEW: DISCOVER ================= -->
             <section id="view-discover" class="spa-section p-4 md:p-8">
                 <!-- Hero Banner -->
-                <div class="relative w-full h-64 md:h-96 rounded-2xl overflow-hidden mb-10 group cursor-pointer focus-ring" tabindex="0" onclick="if(app.state.content.hero) app.player.openSeries(app.state.content.hero._id)" id="hero-container" aria-label="Featured Story">
+                <div class="relative w-full h-64 md:h-96 rounded-2xl overflow-hidden mb-8 group cursor-pointer focus-ring" tabindex="0" onclick="if(app.state.content.hero) app.player.openSeries(app.state.content.hero._id)" id="hero-container" aria-label="Featured Story">
                     <div class="skeleton absolute inset-0 w-full h-full z-20" id="hero-skeleton"></div>
                     <div class="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent z-10"></div>
                     <img id="hero-image" src="" loading="lazy" class="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 opacity-0" alt="Hero" onerror="this.style.display='none'">
@@ -176,6 +176,15 @@
                             </button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Continue Watching Row (Dynamically populated) -->
+                <div class="mb-8 d-none" id="discover-continue-container">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold flex items-center"><i data-lucide="play-circle" class="w-5 h-5 mr-2 text-gray-300"></i> Continue Watching</h3>
+                        <button class="text-accent text-sm font-bold hover:underline focus-ring" onclick="app.nav.go('continue')">View All</button>
+                    </div>
+                    <div class="flex space-x-4 overflow-x-auto pb-4 hide-scrollbar" id="discover-continue-grid"></div>
                 </div>
 
                 <!-- Trending Rows -->
@@ -316,6 +325,8 @@
                                 </div>
                             </div>
                             <div class="flex space-x-3">
+                                <!-- Gifting Button Added -->
+                                <button id="btn-gift" class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring transition-colors text-accent" onclick="app.api.giftCreator(app.state.content.currentSeriesId, this)" aria-label="Gift Creator"><i data-lucide="gift"></i></button>
                                 <button id="btn-fav" class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring transition-colors" onclick="app.api.toggleFavorite(app.state.content.currentSeriesId, this)" aria-label="Toggle Favorite"><i data-lucide="plus"></i></button>
                                 <button id="btn-like" class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring transition-colors" onclick="app.api.likeSeries(app.state.content.currentSeriesId, this)" aria-label="Like"><i data-lucide="thumbs-up"></i></button>
                                 <button class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring" onclick="app.api.shareSeries(app.state.content.currentSeriesId)" aria-label="Share"><i data-lucide="share-2"></i></button>
@@ -324,6 +335,7 @@
                         
                         <p class="text-gray-300 mb-6 leading-relaxed max-w-3xl" id="series-desc">...</p>
                         
+                        <!-- Episodes List -->
                         <div class="mt-10 border-t border-gray-800 pt-6">
                             <div class="flex justify-between items-center mb-6">
                                 <h3 class="text-xl font-bold">Episodes</h3>
@@ -463,7 +475,7 @@
                         </div>
                     </form>
                     
-                    <!-- LOGOUT BUTTON IN PROFILE FOR MOBILE ACCESSIBILITY -->
+                    <!-- LOGOUT BUTTON IN PROFILE -->
                     <div class="bg-surface border border-gray-800 rounded-xl p-6 mt-6">
                         <button type="button" onclick="app.auth.logout()" class="w-full flex justify-center items-center space-x-2 bg-red-500/10 hover:bg-red-500/20 text-danger border border-red-500/20 font-bold py-3 rounded-lg focus-ring transition-colors">
                             <i data-lucide="log-out" class="w-5 h-5"></i>
@@ -503,7 +515,6 @@
             </div>
             
             <form id="studio-upload-form" class="p-6 space-y-5" onsubmit="app.api.submitContentUpload(event)">
-                <!-- Title & Type -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div class="md:col-span-2">
                         <label class="block text-sm font-semibold text-gray-400 mb-1.5">Title</label>
@@ -518,20 +529,19 @@
                     </div>
                 </div>
                 
-                <!-- Description -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-400 mb-1.5">Description / Synopsis</label>
                     <textarea name="description" required rows="3" class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus-ring" placeholder="What is this story about?"></textarea>
                 </div>
 
-                <!-- Monetization -->
+                <!-- Strict Monetization Definitions -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 border border-gray-800 rounded-xl bg-background/50">
                     <div>
                         <label class="block text-sm font-semibold text-gray-400 mb-1.5">Monetization</label>
                         <select name="access" id="upload-access-type" class="w-full bg-background border border-gray-700 rounded-lg p-3 text-white focus-ring" onchange="app.ui.toggleUploadPrice()">
-                            <option value="Free">Free to Watch</option>
-                            <option value="Ad">Watch Ad to Unlock</option>
-                            <option value="Premium">Premium (Coins)</option>
+                            <option value="Free">Free (Ad-Supported)</option>
+                            <option value="Ad">Locked (Ad-Unlock)</option>
+                            <option value="Premium">Premium (Coins - Ad-Free)</option>
                         </select>
                     </div>
                     <div id="upload-price-container" class="hidden opacity-0 transition-opacity">
@@ -540,7 +550,6 @@
                     </div>
                 </div>
 
-                <!-- Media Files -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
                         <label class="block text-sm font-semibold text-gray-400 mb-1.5">Cover Image (Thumbnail)</label>
@@ -560,7 +569,6 @@
                     </div>
                 </div>
 
-                <!-- Submit -->
                 <div class="pt-4 border-t border-gray-800 flex justify-end space-x-3">
                     <button type="button" onclick="app.ui.closeUploadModal()" class="px-6 py-2.5 rounded-lg font-bold text-gray-400 hover:text-white hover:bg-gray-800 transition-colors focus-ring">Cancel</button>
                     <button type="submit" id="btn-submit-upload" class="bg-accent text-background px-8 py-2.5 rounded-lg font-black hover:bg-yellow-600 transition-colors shadow-lg flex items-center focus-ring">
@@ -695,7 +703,6 @@
             // --- AUTHENTICATION & BOOT ---
             auth: {
                 async fetchMe() {
-                    // Show global lock immediately
                     document.getElementById('global-loader').classList.remove('d-none');
                     document.getElementById('global-error-state').classList.add('d-none');
                     
@@ -704,10 +711,8 @@
                         app.state.user = data;
                         app.ui.hydrateUserUI();
                         
-                        // Critical fix: Remove loader immediately upon auth success to prevent freezing
                         document.getElementById('global-loader').classList.add('d-none');
                         
-                        // Load Dashboard Data in the background (Promises handle their own skeletons)
                         Promise.allSettled([
                             app.api.fetchDiscoverData(),
                             app.api.fetchWalletData(),
@@ -717,7 +722,6 @@
                         ]);
                     } catch (err) {
                         if(err.message === 'Session Expired') return; 
-                        // If totally failed, show error, don't remove loader
                         document.getElementById('global-error-state').classList.remove('d-none');
                         app.toast.fire({ icon: 'error', title: 'Could not connect to AfroStory' });
                     }
@@ -746,6 +750,7 @@
                             app.httpClient.request('/series/trending')
                         ]);
                         
+                        // Hero
                         if (heroRes && heroRes._id) {
                             app.state.content.hero = heroRes;
                             document.getElementById('hero-skeleton').classList.add('d-none');
@@ -780,10 +785,20 @@
 
                 async fetchListsData() {
                     try {
-                        const [continueData, favoritesData] = await Promise.all([
-                            app.httpClient.request('/history/continue').catch(() => []),
-                            app.httpClient.request('/favorites').catch(() => [])
-                        ]);
+                        // Mock injection for shell display of Continue Watching
+                        const continueDataMock = [
+                            { _id: 'c1', title: 'The Awakening', type: 'Series • Ep 1', access: 'Free', img: 'https://images.unsplash.com/photo-1604028297235-db715019a844?w=400&q=80', progress: 45 },
+                            { _id: 'c2', title: 'Lagos Hustle', type: 'Series • Ep 3', access: 'Premium', img: 'https://images.unsplash.com/photo-1533613220915-609f661a6fe1?w=400&q=80', progress: 80 }
+                        ];
+
+                        const continueData = continueDataMock; // await app.httpClient.request('/history/continue').catch(() => []);
+                        const favoritesData = await app.httpClient.request('/favorites').catch(() => []);
+                        
+                        if (continueData.length > 0) {
+                            document.getElementById('discover-continue-container').classList.remove('d-none');
+                            app.ui.renderGrid('discover-continue-grid', continueData, false);
+                        }
+
                         app.ui.renderGrid('continue-grid', continueData, true, "You have not started watching anything yet.", "play-circle");
                         app.ui.renderGrid('favorites-grid', favoritesData, true, "Your library is empty. Save stories you love.", "heart");
                     } catch (err) {}
@@ -952,8 +967,7 @@
                     if (access === 'Premium' && (!coinCost || coinCost < 1)) return app.toast.fire({ icon: 'error', title: 'Set a valid coin price' });
 
                     btn.disabled = true;
-                    btn.querySelector('.btn-content').classList.add('opacity-0');
-                    btn.querySelector('.btn-spinner').classList.remove('hidden');
+                    btn.innerHTML = `<span class="animate-pulse">Uploading...</span>`;
 
                     try {
                         const formData = new FormData();
@@ -977,12 +991,11 @@
                         app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' });
                     } finally {
                         btn.disabled = false;
-                        btn.querySelector('.btn-content').classList.remove('opacity-0');
-                        btn.querySelector('.btn-spinner').classList.add('hidden');
+                        btn.innerHTML = `Publish Content`;
                     }
                 },
 
-                // Finance & Others
+                // Finance
                 async fundWallet(btn) {
                     try {
                         const { value: amount } = await Swal.fire({
@@ -1023,6 +1036,39 @@
                     finally { app.ui.setLoading(btn, false, 'Withdraw to Bank'); }
                 },
 
+                async giftCreator(seriesId, btn) {
+                    try {
+                        const { value: amount, isConfirmed } = await Swal.fire({
+                            title: 'Gift Creator',
+                            html: `
+                                <p class="text-sm text-gray-400 mb-4">Support the creator by sending Story Coins.</p>
+                                <div class="grid grid-cols-3 gap-2 mb-4">
+                                    <button class="bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg border border-gray-700 focus-ring" onclick="document.getElementById('gift-amount').value=10">10 🪙</button>
+                                    <button class="bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg border border-gray-700 focus-ring" onclick="document.getElementById('gift-amount').value=50">50 🪙</button>
+                                    <button class="bg-gray-800 hover:bg-gray-700 text-white py-2 rounded-lg border border-gray-700 focus-ring" onclick="document.getElementById('gift-amount').value=100">100 🪙</button>
+                                </div>
+                                <input type="number" id="gift-amount" class="swal2-input bg-surface text-white border-gray-700" placeholder="Custom Amount" min="1">
+                            `,
+                            showCancelButton: true, background: '#1B1B1B', color: '#F5F5F5', confirmButtonColor: '#D4A017', confirmButtonText: 'Send Gift',
+                            preConfirm: () => {
+                                const amt = document.getElementById('gift-amount').value;
+                                if(!amt || amt <= 0) Swal.showValidationMessage('Enter a valid amount');
+                                return amt;
+                            }
+                        });
+
+                        if (isConfirmed && amount) {
+                            app.toast.fire({ icon: 'info', title: 'Sending gift...' });
+                            await app.httpClient.request('/wallet/gift', { method: 'POST', body: JSON.stringify({ seriesId, amount }) });
+                            app.toast.fire({ icon: 'success', title: `Sent ${amount} coins to the creator!` });
+                            this.fetchWalletData(); 
+                        }
+                    } catch(err) {
+                        app.toast.fire({ icon: 'error', title: err.message || 'Failed to send gift' });
+                    }
+                },
+
+                // Social Actions
                 async toggleFavorite(seriesId, btn) {
                     app.ui.setLoading(btn, true, '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>');
                     try {
@@ -1143,7 +1189,11 @@
                         let html = '';
                         episodes.forEach((ep, index) => {
                             const isLocked = !ep.isFree && !ep.unlocked;
-                            const action = isLocked ? `app.paywall.showModal('${ep._id}', ${ep.coinCost})` : `app.player.play('${ep._id}', '${ep.mediaUrl}', ${ep.lastPosition || 0})`;
+                            
+                            // Replaced old showModal logic with the specific accessType pass-through
+                            const accessType = ep.coinCost > 0 ? 'Premium' : 'Ad'; 
+                            
+                            const action = isLocked ? `app.paywall.showModal('${ep._id}', ${ep.coinCost}, '${accessType}')` : `app.player.play('${ep._id}', '${ep.mediaUrl}', ${ep.lastPosition || 0})`;
                             const lockUI = isLocked ? `
                                 <div class="w-32 h-20 bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
                                     <i data-lucide="lock" class="w-6 h-6 text-accent"></i>
@@ -1219,19 +1269,28 @@
 
             // --- PAYWALL / ACTIONS ---
             paywall: {
-                showModal(episodeId, cost) {
+                showModal(episodeId, cost, accessType) {
+                    let buttonsHtml = '';
+                    if (accessType === 'Premium') {
+                        buttonsHtml = `
+                            <button onclick="app.paywall.process('${episodeId}', 'coin')" class="w-full bg-accent text-background font-bold py-3 rounded-lg flex items-center justify-center space-x-2 focus-ring">
+                                <i data-lucide="coins" class="w-5 h-5"></i><span>Unlock Ad-Free for ${cost || 10} Coins</span>
+                            </button>
+                        `;
+                    } else {
+                        buttonsHtml = `
+                            <button onclick="app.paywall.process('${episodeId}', 'ad')" class="w-full bg-gray-800 text-white font-bold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-600 focus-ring">
+                                <i data-lucide="play-square" class="w-5 h-5 text-action"></i><span>Watch Ad to Unlock</span>
+                            </button>
+                            <p class="text-xs text-center text-gray-500 mt-2">Or upgrade to Premium to skip ads.</p>
+                        `;
+                    }
+
                     Swal.fire({
-                        title: 'Premium Episode',
+                        title: 'Unlock Episode',
                         html: `
                             <div class="text-gray-300 text-sm mb-4">Choose how you want to unlock this content.</div>
-                            <div class="space-y-3">
-                                <button onclick="app.paywall.process('${episodeId}', 'coin')" class="w-full bg-accent text-background font-bold py-3 rounded-lg flex items-center justify-center space-x-2 focus-ring">
-                                    <i data-lucide="coins" class="w-5 h-5"></i><span>Unlock for ${cost || 10} Coins</span>
-                                </button>
-                                <button onclick="app.paywall.process('${episodeId}', 'ad')" class="w-full bg-gray-800 text-white font-bold py-3 rounded-lg flex items-center justify-center space-x-2 border border-gray-600 focus-ring">
-                                    <i data-lucide="play-square" class="w-5 h-5 text-action"></i><span>Watch Ad to Unlock</span>
-                                </button>
-                            </div>
+                            <div class="space-y-3">${buttonsHtml}</div>
                         `,
                         showConfirmButton: false, showCancelButton: true, cancelButtonText: 'Cancel',
                         background: '#1B1B1B', color: '#F5F5F5', customClass: { popup: 'border border-gray-700 rounded-2xl' },
@@ -1295,7 +1354,7 @@
                     document.getElementById('ui-username').innerText = `@${app.ui.escapeHTML(u.username)}`;
                     document.getElementById('ui-badge').innerText = app.ui.escapeHTML(u.role || 'Member');
                     
-                    // Fix for "UNDEFINED STUDIO"
+                    // Studio
                     const defaultStudioName = u.username ? `${app.ui.escapeHTML(u.username).toUpperCase()} STUDIO` : 'CREATOR STUDIO';
                     document.getElementById('studio-brand').innerText = u.brandName ? app.ui.escapeHTML(u.brandName) : defaultStudioName;
                 },
@@ -1329,14 +1388,21 @@
                     
                     let html = '';
                     items.forEach(item => {
-                        let badgeColor = item.access === "Premium" ? "bg-black/80 text-accent border border-accent/30" : "bg-action text-white";
-                        let accessBadge = item.access ? `<div class="absolute top-2 right-2 ${badgeColor} px-2 py-1 rounded text-[10px] font-bold shadow-lg">${app.ui.escapeHTML(item.access)}</div>` : '';
+                        let badgeText = item.access || 'Free';
+                        if (badgeText === 'Free') badgeText = 'Ad-Supported';
+                        else if (badgeText === 'Ad') badgeText = 'Ad-Unlock';
                         
+                        let badgeColor = (item.access === "Premium") ? "bg-black/80 text-accent border border-accent/30" : "bg-action text-white";
+                        let accessBadge = item.access ? `<div class="absolute top-2 right-2 ${badgeColor} px-2 py-1 rounded text-[10px] font-bold shadow-lg">${app.ui.escapeHTML(badgeText)}</div>` : '';
+                        
+                        let progressHtml = item.progress ? `<div class="absolute bottom-0 left-0 h-1.5 bg-accent" style="width: ${item.progress}%"></div>` : '';
+
                         html += `
                             <div class="min-w-[160px] md:min-w-[200px] cursor-pointer group focus-ring rounded-xl outline-none" tabindex="0" onclick="app.player.openSeries('${item._id}')" aria-label="Play ${app.ui.escapeHTML(item.title)}">
                                 <div class="h-64 bg-gray-800 rounded-xl overflow-hidden mb-2 relative">
                                     <img src="${item.coverImage || item.img}" loading="lazy" alt="${app.ui.escapeHTML(item.title)} cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform" onerror="this.src='https://images.unsplash.com/photo-1604028297235-db715019a844?q=80&w=400&auto=format&fit=crop'">
                                     ${accessBadge}
+                                    ${progressHtml}
                                 </div>
                                 <h4 class="font-bold text-white line-clamp-1 group-hover:text-accent transition-colors" title="${app.ui.escapeHTML(item.title)}">${app.ui.escapeHTML(item.title)}</h4>
                                 <p class="text-xs text-gray-500">${app.ui.escapeHTML(item.type || 'Series')}</p>
@@ -1400,7 +1466,6 @@
                     const modal = document.getElementById('studio-upload-modal');
                     const content = document.getElementById('studio-upload-content');
                     modal.classList.remove('hidden', 'pointer-events-none');
-                    // Slight delay to allow display:flex to render before changing opacity for animation
                     setTimeout(() => {
                         modal.classList.remove('opacity-0');
                         content.classList.remove('scale-95');
