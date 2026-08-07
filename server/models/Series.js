@@ -18,7 +18,7 @@ const seriesSchema = new mongoose.Schema({
     trim: true, 
     maxlength: 2000 
   },
-  // --- NEW: Handle Movie vs Series ---
+  // --- Handle Movie vs Series ---
   type: { 
     type: String, 
     enum: ['Movie', 'Series'], 
@@ -41,9 +41,17 @@ const seriesSchema = new mongoose.Schema({
   followers: { type: Number, default: 0 },
   totalViews: { type: Number, default: 0 },
   totalEpisodes: { type: Number, default: 0 },
-  // --- UPDATED: Frontend UI Meta Data ---
+  
+  // --- Frontend UI Meta Data ---
   rating: { type: Number, default: 98 }, // 98% Match
-  releaseYear: { type: Number, default: () => new Date().getFullYear() }
+  releaseYear: { type: Number, default: () => new Date().getFullYear() },
+
+  // --- LIKE SYSTEM ---
+  // We store User IDs in an array. The total likes = likes.length
+  likes: [{ 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User' 
+  }]
 }, { timestamps: true });
 
 export default mongoose.model('Series', seriesSchema);
