@@ -133,7 +133,6 @@
 
             <!-- ================= VIEW: DISCOVER ================= -->
             <section id="view-discover" class="spa-section p-4 md:p-8">
-                <!-- Hero Banner -->
                 <div class="relative w-full h-64 md:h-96 rounded-2xl overflow-hidden mb-8 group cursor-pointer focus-ring" tabindex="0" onclick="if(app.state.content.hero) app.player.openSeries(app.state.content.hero._id)">
                     <div class="skeleton absolute inset-0 w-full h-full z-20" id="hero-skeleton"></div>
                     <div class="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent z-10"></div>
@@ -150,7 +149,6 @@
                     </div>
                 </div>
 
-                <!-- Continue Watching Row -->
                 <div class="mb-8 d-none" id="discover-continue-container">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold flex items-center"><i data-lucide="play-circle" class="w-5 h-5 mr-2 text-gray-300"></i> Continue Watching</h3>
@@ -159,7 +157,6 @@
                     <div class="flex space-x-4 overflow-x-auto pb-4 hide-scrollbar" id="discover-continue-grid"></div>
                 </div>
 
-                <!-- Trending Rows -->
                 <div class="mb-8">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-bold flex items-center"><i data-lucide="trending-up" class="w-5 h-5 mr-2 text-action"></i> Trending Now</h3>
@@ -251,20 +248,16 @@
 
             <!-- ================= VIEW: PLAYER / SERIES / COMMENTS ================= -->
             <section id="view-player" class="spa-section">
-                <!-- Video Player Shell -->
                 <div class="w-full bg-black aspect-video relative group" id="video-container">
                     <video id="hls-player" class="w-full h-full" controls crossorigin playsinline></video>
-                    
                     <div id="video-overlay" class="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
                         <i data-lucide="play-circle" class="w-20 h-20 text-gray-700"></i>
                     </div>
-
                     <button onclick="app.player.close()" class="absolute top-4 left-4 z-20 text-white bg-black/50 p-2 rounded-full hover:text-accent focus-ring shadow-lg" aria-label="Close Player">
                         <i data-lucide="arrow-left"></i>
                     </button>
                 </div>
 
-                <!-- Series Meta -->
                 <div class="p-4 md:p-8 max-w-6xl mx-auto">
                     <div id="player-meta-error" class="d-none text-center py-10"></div>
                     <div id="player-meta-content">
@@ -289,7 +282,6 @@
                         
                         <p class="text-gray-300 mb-6 leading-relaxed max-w-3xl" id="series-desc">...</p>
                         
-                        <!-- Episodes List -->
                         <div class="mt-10 border-t border-gray-800 pt-6">
                             <div class="flex justify-between items-center mb-6">
                                 <h3 class="text-xl font-bold">Episodes</h3>
@@ -468,6 +460,16 @@
                             <h2 class="text-3xl font-black text-white" id="admin-content">0</h2>
                         </div>
                     </div>
+                    
+                    <!-- NEW: USERS BY REGION -->
+                    <div class="bg-surface border border-gray-800 rounded-xl p-6 mt-6">
+                        <h3 class="text-xl font-bold mb-4 border-b border-gray-800 pb-2">Users by Region</h3>
+                        <div id="admin-region-stats" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="skeleton h-12 w-full rounded-lg"></div>
+                            <div class="skeleton h-12 w-full rounded-lg"></div>
+                        </div>
+                    </div>
+
                 </div>
             </section>
         </div>
@@ -675,7 +677,6 @@
                             app.api.fetchNotifications()
                         ]);
 
-                        // Show Admin menu if applicable
                         if(data.role === 'ADMIN' || data.role === 'OWNER') {
                             document.getElementById('admin-menu-section').classList.remove('d-none');
                             app.api.fetchAdminStats();
@@ -743,7 +744,6 @@
 
                 async fetchListsData() {
                     try {
-                        // Using mock data to demonstrate the "Continue Watching" UI progress bar
                         const continueDataMock = [
                             { _id: 'c1', title: 'The Awakening', type: 'Series • Ep 1', access: 'Free', img: 'https://images.unsplash.com/photo-1604028297235-db715019a844?w=400&q=80', progress: 45 },
                             { _id: 'c2', title: 'Lagos Hustle', type: 'Series • Ep 3', access: 'Premium', img: 'https://images.unsplash.com/photo-1533613220915-609f661a6fe1?w=400&q=80', progress: 80 }
@@ -834,6 +834,30 @@
                             document.getElementById('admin-profit').innerText = app.ui.escapeHTML(stats.platformProfit?.toString() || "0.00");
                             document.getElementById('admin-users').innerText = app.ui.escapeHTML(stats.totalUsers?.toString() || "0");
                             document.getElementById('admin-content').innerText = app.ui.escapeHTML(stats.totalContent?.toString() || "0");
+
+                            // NEW: Render Region Stats with Flags
+                            const regionContainer = document.getElementById('admin-region-stats');
+                            if (stats.usersByCountry && stats.usersByCountry.length > 0) {
+                                let regionHtml = '';
+                                stats.usersByCountry.forEach(region => {
+                                    const flagHtml = region._id === 'UNKNOWN' ? '🌍' : `<img src="https://flagcdn.com/w20/${region._id.toLowerCase()}.png" class="w-6 h-auto rounded-sm drop-shadow-md" alt="${region._id}">`;
+                                    regionHtml += `
+                                        <div class="flex justify-between items-center bg-gray-800/30 p-4 rounded-xl border border-gray-700 hover:border-gray-600 transition-colors">
+                                            <div class="flex items-center space-x-3">
+                                                ${flagHtml}
+                                                <span class="font-bold text-white text-lg">${app.ui.escapeHTML(region._id)}</span>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="text-accent font-black text-xl">${app.ui.escapeHTML(region.count.toString())}</span>
+                                                <p class="text-[10px] text-gray-500 uppercase tracking-widest">Users</p>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                                regionContainer.innerHTML = regionHtml;
+                            } else {
+                                regionContainer.innerHTML = '<p class="text-gray-500 text-sm col-span-full">No regional data available yet.</p>';
+                            }
                         }
                     } catch (e) {}
                 },
@@ -875,11 +899,11 @@
                     }
                 },
 
-                // Comments
+                // Comments (Fixed Endpoints)
                 async fetchComments(seriesId) {
                     const listContainer = document.getElementById('comments-list');
                     try {
-                        const comments = await app.httpClient.request(`/series/${seriesId}/comments`).catch(() => []);
+                        const comments = await app.httpClient.request(`/comments/${seriesId}`).catch(() => []);
                         document.getElementById('comments-count').innerText = comments.length;
                         
                         let html = '';
@@ -917,7 +941,7 @@
                     app.ui.setLoading(btn, true, '...');
                     
                     try {
-                        await app.httpClient.request(`/series/${app.state.content.currentSeriesId}/comments`, {
+                        await app.httpClient.request(`/comments/${app.state.content.currentSeriesId}`, {
                             method: 'POST', body: JSON.stringify({ text })
                         });
                         input.value = '';
@@ -1581,3 +1605,4 @@
     </script>
 </body>
 </html>
+
