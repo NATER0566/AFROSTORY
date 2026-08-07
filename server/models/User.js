@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
   passwordHash: { 
     type: String, 
     required: true, 
-    select: false // Absolute security: never returns in normal queries
+    select: false 
   },
   pinHash: { 
     type: String, 
@@ -33,48 +33,22 @@ const userSchema = new mongoose.Schema({
     default: 'USER' 
   },
   
-  // --- Profile & Studio Branding ---
-  avatarUrl: {
-    type: String // Stores the Cloudinary image URL for their profile picture
-  },
-  brandName: {
-    type: String // E.g., "NATER GRACE CODE"
-  },
-  followers: {
-    type: Number,
-    default: 0
-  },
+  // --- Profile & Studio Info ---
+  avatarUrl: { type: String },
+  brandName: { type: String },
+  followers: { type: Number, default: 0 },
 
   // --- Regional Monetization Engine ---
-  country: {
-    type: String,
-    default: 'UNKNOWN' // Will be auto-populated by IP (e.g., 'NG')
-  },
+  country: { type: String, default: 'UNKNOWN' },
   
   // --- OTP Verification Engine ---
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  otpCode: {
-    type: String,
-    select: false // Hidden from normal queries
-  },
-  otpExpiry: {
-    type: Date,
-    select: false // Hidden from normal queries
-  },
+  isVerified: { type: Boolean, default: false },
+  otpCode: { type: String, select: false },
+  otpExpiry: { type: Date, select: false },
   
   // --- System ---
-  adUnlocksRemaining: { 
-    type: Number, 
-    default: 3, 
-    min: 0 
-  },
-  isActive: { 
-    type: Boolean, 
-    default: true 
-  }
+  adUnlocksRemaining: { type: Number, default: 3, min: 0 },
+  isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
 export default mongoose.model('User', userSchema);
