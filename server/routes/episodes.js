@@ -1,147 +1,124 @@
+import mongoose from 'mongoose';
 import Episode from '../models/Episode.js';
-import Series from '../models/Series.js';
+import User from '../models/User.js';
+import Wallet from '../models/Wallet.js';
 import Unlock from '../models/Unlock.js';
-import History from '../models/History.js';
+import Transaction from '../models/Transaction.js';
 import { requireAuth } from '../middleware/auth.js';
 
 export default async function episodeRoutes(fastify, options) {
 
   // ==========================================
-  // 1. ADD NEW EPISODE (Protected - Creators Only)
+  // 1. UNLOCK EPISODE VIA PREMIUM COINS
   // ==========================================
-  fastify.post('/', { preHandler: [requireAuth] }, async (req, reply) => {
+  fastify.post('/unlock/coin', { preHandler: [requireAuth] }, async (req, reply) => {
+    const { episodeId } = req.body;
+    const userId = req.user.userId;
+
+    if (!episodeId) return reply.code(400).send({ success: false, message: 'Episode ID required' });
+
+    const episode = await Episode.findById(episodeId).populate('seriesId');
+    if (!episode) return reply.code(404).send({ success: false, message: 'Episode not found' });
+
+    if (episode.isFree) return reply.code(200).send({ success: true, message: 'Episode is already free' });
+
+    const existingUnlock = await Unlock.findOne({ userId, episodeId });
+    if (existingUnlock) return reply.code(200).send({ success: true, message: 'Episode already unlocked' });
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-      if (req.user.role !== 'CREATOR' && req.user.role !== 'ADMIN') {
-        return reply.code(403).send({ success: false, message: 'Only creators can upload episodes.' });
+      const userWallet = await Wallet.findOne({ userId }).session(session);
+      const coinCost = episode.coinCost;
+
+      if (parseFloat(userWallet.storyCoins.toString()) < coinCost) {
+        throw new Error('INSUFFICIENT_FUNDS');
       }
 
-      const { seriesId, episodeNumber, title, mediaUrl, duration, isFree, coinCost, adUnlockable } = req.body;
+      // REGIONAL PROFIT ENGINE
+      const creatorId = episode.seriesId.creatorId;
+      const creatorUser = await User.findById(creatorId).session(session);
+      const splitRate = (creatorUser.country === 'NG') ? 0.60 : 0.55;
+      
+      const creatorEarnings = parseFloat((coinCost * splitRate).toFixed(2)); 
 
-      if (!seriesId || !episodeNumber || !title || !mediaUrl || !duration) {
-        return reply.code(400).send({ success: false, message: 'Missing required episode parameters.' });
-      }
+      // 1. Deduct from User
+      await Wallet.updateOne({ userId }, { $inc: { storyCoins: -coinCost } }, { session });
+      
+      // 2. Add to Creator
+      await Wallet.updateOne({ userId: creatorId }, { $inc: { lockedEarnings: creatorEarnings } }, { session });
+      
+      // 3. Grant Access
+      await Unlock.create([{ userId, episodeId, method: 'COIN', amountPaid: coinCost }], { session });
+      
+      // 4. Update Analytics
+      await Episode.updateOne({ _id: episodeId }, { $inc: { totalUnlocks: 1 } }, { session });
+      
+      // 5. Audit Trail
+      await Transaction.create([{
+        walletId: userWallet._id,
+        type: 'SPEND',
+        amount: -coinCost,
+        description: `Unlocked Episode: ${episode.title}`,
+        status: 'SUCCESS'
+      }], { session });
 
-      // Enterprise Security: Ensure the creator actually owns the series they are adding to
-      const series = await Series.findOne({ _id: seriesId, creatorId: req.user.userId });
-      if (!series && req.user.role !== 'ADMIN') {
-        return reply.code(403).send({ success: false, message: 'You do not have permission to modify this series.' });
-      }
+      await session.commitTransaction();
+      return reply.code(200).send({ success: true, message: 'Episode unlocked successfully' });
 
-      const newEpisode = await Episode.create({
-        seriesId,
-        episodeNumber,
-        title,
-        mediaUrl, // This HLS URL stays hidden from public endpoints
-        duration,
-        isFree: isFree || false,
-        coinCost: coinCost || 10,
-        adUnlockable: adUnlockable !== undefined ? adUnlockable : true,
-        status: 'PUBLISHED'
-      });
-
-      // Automatically update the parent series episode count
-      await Series.updateOne({ _id: seriesId }, { $inc: { totalEpisodes: 1 } });
-
-      return reply.code(201).send({
-        success: true,
-        message: 'Episode successfully deployed.',
-        data: { id: newEpisode._id, title: newEpisode.title }
-      });
     } catch (error) {
-      // Catch MongoDB duplicate key error (11000) for identical episode numbers
-      if (error.code === 11000) {
-        return reply.code(409).send({ success: false, message: 'An episode with this number already exists in this series.' });
+      await session.abortTransaction();
+      if (error.message === 'INSUFFICIENT_FUNDS') {
+        return reply.code(402).send({ success: false, message: 'Insufficient coins. Please top up.' });
       }
-      req.log.error(`Episode Upload Error: ${error.message}`);
-      return reply.code(500).send({ success: false, message: 'Failed to deploy episode.' });
+      req.log.error(`Unlock Error: ${error.message}`);
+      return reply.code(500).send({ success: false, message: 'Unlock failed. Please try again.' });
+    } finally {
+      session.endSession();
     }
   });
 
   // ==========================================
-  // 2. SECURE PLAYBACK (The Access Gate)
+  // 2. UNLOCK EPISODE VIA REWARDED AD
   // ==========================================
-  fastify.get('/:id/play', { preHandler: [requireAuth] }, async (req, reply) => {
-    try {
-      const episodeId = req.params.id;
-      const userId = req.user.userId;
+  fastify.post('/unlock/ad', { preHandler: [requireAuth] }, async (req, reply) => {
+    const { episodeId } = req.body;
+    const userId = req.user.userId;
 
-      const episode = await Episode.findById(episodeId).lean();
-      if (!episode || episode.status !== 'PUBLISHED') {
-        return reply.code(404).send({ success: false, message: 'Episode unavailable.' });
-      }
-
-      let hasAccess = false;
-
-      // Check 1: Is it free for everyone?
-      if (episode.isFree) {
-        hasAccess = true;
-      } else {
-        // Check 2: Did the user legitimately unlock this?
-        const accessCheck = await Unlock.findOne({ userId, episodeId }).lean();
-        if (accessCheck) hasAccess = true;
-      }
-
-      if (!hasAccess) {
-        return reply.code(402).send({ 
-          success: false, 
-          message: 'Payment required to watch this episode.',
-          requiredAction: 'UNLOCK'
-        });
-      }
-
-      // Access Granted: Establish or retrieve watch history
-      let history = await History.findOne({ userId, episodeId });
-      if (!history) {
-        history = await History.create({ userId, episodeId, lastPosition: 0 });
-      }
-
-      // Update analytics asynchronously (do not block the video from loading)
-      Episode.updateOne({ _id: episodeId }, { $inc: { totalViews: 1 } }).catch(e => req.log.error(e));
-      Series.updateOne({ _id: episode.seriesId }, { $inc: { totalViews: 1 } }).catch(e => req.log.error(e));
-
-      // Deliver the locked payload securely
-      return reply.code(200).send({
-        success: true,
-        data: {
-          mediaUrl: episode.mediaUrl, // The frontend video player finally gets the URL
-          lastPosition: history.lastPosition
-        }
-      });
-    } catch (error) {
-      req.log.error(`Playback Authorization Error: ${error.message}`);
-      return reply.code(500).send({ success: false, message: 'Failed to initialize secure stream.' });
+    const episode = await Episode.findById(episodeId);
+    if (!episode || !episode.adUnlockable) {
+      return reply.code(403).send({ success: false, message: 'This episode cannot be unlocked with an ad.' });
     }
-  });
 
-  // ==========================================
-  // 3. TRACK WATCH PROGRESS
-  // ==========================================
-  fastify.put('/:id/progress', { preHandler: [requireAuth] }, async (req, reply) => {
+    const existingUnlock = await Unlock.findOne({ userId, episodeId });
+    if (existingUnlock) return reply.code(200).send({ success: true, message: 'Episode already unlocked' });
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
     try {
-      const episodeId = req.params.id;
-      const { lastPosition, completed } = req.body;
-      const userId = req.user.userId;
+      const user = await User.findById(userId).session(session);
+      
+      if (user.adUnlocksRemaining <= 0) throw new Error('NO_ADS_REMAINING');
 
-      if (lastPosition === undefined) {
-        return reply.code(400).send({ success: false, message: 'lastPosition is required.' });
-      }
+      user.adUnlocksRemaining -= 1;
+      await user.save({ session });
 
-      await History.updateOne(
-        { userId, episodeId },
-        { 
-          $set: { 
-            lastPosition: Number(lastPosition),
-            completed: completed || false 
-          }
-        },
-        { upsert: true }
-      );
+      await Unlock.create([{ userId, episodeId, method: 'AD', amountPaid: 0 }], { session });
+      await Episode.updateOne({ _id: episodeId }, { $inc: { totalAdUnlocks: 1 } }, { session });
 
-      return reply.code(200).send({ success: true });
+      await session.commitTransaction();
+      return reply.code(200).send({ success: true, message: 'Ad unlock successful. Enjoy the episode!' });
+
     } catch (error) {
-      req.log.error(`Progress Sync Error: ${error.message}`);
-      // Do not crash the app if a progress ping fails, just return 500 silently
-      return reply.code(500).send({ success: false });
+      await session.abortTransaction();
+      if (error.message === 'NO_ADS_REMAINING') {
+        return reply.code(429).send({ success: false, message: 'Daily ad limit reached. Come back tomorrow or use coins.' });
+      }
+      return reply.code(500).send({ success: false, message: 'System error during unlock.' });
+    } finally {
+      session.endSession();
     }
   });
 
