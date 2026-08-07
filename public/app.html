@@ -743,7 +743,6 @@
 
                 async fetchListsData() {
                     try {
-                        // FIXED: Replaced Mock Data with actual API call to database
                         const continueData = await app.httpClient.request('/history/continue').catch(() => []);
                         const favoritesData = await app.httpClient.request('/favorites').catch(() => []);
                         
@@ -980,6 +979,7 @@
                     }
                 },
                 
+                // FIXED: Avatar Upload Handler
                 async uploadAvatar(e) {
                     const file = e.target.files[0];
                     if(!file) return;
@@ -988,7 +988,7 @@
                     const btn = document.getElementById('btn-change-avatar');
                     const ogHtml = btn.innerHTML;
                     btn.disabled = true;
-                    btn.innerHTML = `<span class="animate-pulse">Uploading...</span>`;
+                    btn.innerHTML = `<span class="animate-pulse text-accent">Uploading Image...</span>`;
                     
                     try {
                         const formData = new FormData();
@@ -996,9 +996,10 @@
                         const res = await app.httpClient.request('/profile/avatar', { method: 'POST', body: formData });
                         app.state.user.avatarUrl = res.avatarUrl;
                         app.ui.hydrateUserUI();
-                        app.toast.fire({ icon: 'success', title: 'Avatar Updated' });
-                    } catch (err) { app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' }); } 
-                    finally { 
+                        app.toast.fire({ icon: 'success', title: 'Avatar Updated Successfully' });
+                    } catch (err) { 
+                        app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' }); 
+                    } finally { 
                         btn.disabled = false;
                         btn.innerHTML = ogHtml; 
                         e.target.value = ''; 
@@ -1021,18 +1022,29 @@
                     if (!coverImage || !videoFile) return app.toast.fire({ icon: 'error', title: 'Both Image and Video files are required' });
                     if (access === 'Premium' && (!coinCost || coinCost < 1)) return app.toast.fire({ icon: 'error', title: 'Set a valid coin price' });
 
-                    // Close the upload modal immediately so the user can see the progress blocker
+                    // Hide the form modal
                     app.ui.closeUploadModal();
 
-                    // Lock the entire screen with a SweetAlert so they don't click anything while the video uploads
+                    // Create an Abort Controller to allow cancelling!
+                    const controller = new AbortController();
+
+                    // Lock the entire screen with a SweetAlert, but add a Cancel button!
                     Swal.fire({
                         title: 'Uploading to Vault...',
-                        html: 'Please do not close or refresh this page.<br><br><b class="text-accent">Processing heavy video files takes time...</b>',
+                        html: '<p class="mb-4">Please keep this page open.</p><b class="text-accent text-sm bg-gray-800 p-3 rounded-lg block">Large video files can take several minutes to upload depending on your network speed.</b>',
                         allowOutsideClick: false,
                         allowEscapeKey: false,
                         showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: 'Cancel Upload',
+                        cancelButtonColor: '#E74C3C',
                         background: '#1B1B1B', color: '#F5F5F5',
                         didOpen: () => { Swal.showLoading(); }
+                    }).then((result) => {
+                        if (result.isDismissed) {
+                            controller.abort(); // KILL THE UPLOAD IF THEY CLICK CANCEL
+                            app.toast.fire({ icon: 'info', title: 'Upload Cancelled by User' });
+                        }
                     });
 
                     try {
@@ -1045,8 +1057,8 @@
                         formData.append('coverImage', coverImage);
                         formData.append('videoFile', videoFile);
                         
-                        // CRITICAL: We pass "0" as the third argument to stop the HTTP client from retrying if it takes a long time!
-                        await app.httpClient.request('/studio/upload', { method: 'POST', body: formData }, 0);
+                        // Pass the signal to our fetch request so it can be aborted!
+                        await app.httpClient.request('/studio/upload', { method: 'POST', body: formData, signal: controller.signal }, 0);
                         
                         Swal.fire({
                             icon: 'success', title: 'Content Published!',
@@ -1060,9 +1072,11 @@
                         document.getElementById('upload-video-label').innerText = 'Select Video File';
                         this.fetchStudioStats();
                     } catch (err) {
+                        if (err.name === 'AbortError') return; // Do nothing, we handled it above
+                        
                         Swal.fire({
                             icon: 'error', title: 'Upload Failed',
-                            text: err.message || 'The server took too long or the file was rejected.',
+                            text: err.message || 'The server rejected the file or your network disconnected.',
                             background: '#1B1B1B', color: '#F5F5F5', confirmButtonColor: '#E74C3C',
                             customClass: { popup: 'border border-gray-700 rounded-2xl' }
                         });
