@@ -58,8 +58,8 @@
         .d-none { display: none !important; }
     </style>
 </head>
-<!-- Removed overflow-hidden to allow natural full-page scrolling -->
-<body class="bg-background text-primary font-sans antialiased min-h-screen flex items-center justify-center p-4 relative selection:bg-accent selection:text-background">
+<!-- Replaced min-h-screen with min-h-[100dvh] and removed body overflow limits for mobile keyboard scrolling safety -->
+<body class="bg-background text-primary font-sans antialiased min-h-[100dvh] flex items-center justify-center p-4 relative selection:bg-accent selection:text-background">
 
     <!-- Global Fullscreen Redirect Overlay -->
     <div id="global-overlay" class="fixed inset-0 bg-background z-[100] flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500">
@@ -68,12 +68,12 @@
         <p class="text-gray-500 mt-2 text-sm">Securing your connection to AfroStory</p>
     </div>
 
-    <!-- Cinematic Background (Changed to fixed so it doesn't break when scrolling down) -->
+    <!-- Cinematic Background -->
     <div class="fixed inset-0 z-0 bg-cinematic bg-cover bg-center opacity-30"></div>
     <div class="fixed inset-0 z-0 bg-gradient-to-t from-background via-background/90 to-background/50"></div>
 
-    <!-- Auth Container (Removed max-height and internal overflow limits, added margin for mobile scrolling comfort) -->
-    <div class="w-full max-w-md bg-surface/95 backdrop-blur-md border border-gray-800 rounded-3xl shadow-2xl p-6 sm:p-8 relative z-10 my-8">
+    <!-- Auth Container -->
+    <div class="w-full max-w-md bg-surface/95 backdrop-blur-md border border-gray-800 rounded-3xl shadow-2xl p-8 relative z-10 max-h-[95vh] overflow-y-auto hide-scrollbar">
         
         <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-1.5 bg-accent rounded-b-full shadow-[0_0_30px_#D4A017] opacity-80"></div>
 
@@ -304,6 +304,9 @@
     <script>
         lucide.createIcons();
 
+        // State to track email for verification flow
+        let currentAuthEmail = '';
+
         // --- SECURITY ---
         const getCsrfToken = () => {
             const meta = document.querySelector('meta[name="csrf-token"]');
@@ -368,14 +371,12 @@
             const result = zxcvbn(val);
             const score = result.score; // 0 to 4
 
-            // Update Bars
             const colors = ['bg-danger', 'bg-danger', 'bg-yellow-400', 'bg-success', 'bg-success'];
             const activeColor = colors[score];
             strBars.forEach((bar, index) => {
                 bar.className = `w-1/4 rounded-full transition-colors duration-300 ${index <= score ? activeColor : 'bg-gray-700'}`;
             });
 
-            // Update Text & Feedback
             const labels = ['Very Weak 🔴', 'Weak 🔴', 'Fair 🟡', 'Strong 🟢', 'Excellent 🟢'];
             const labelColors = ['text-danger', 'text-danger', 'text-yellow-400', 'text-success', 'text-success'];
             
@@ -428,6 +429,7 @@
             }
             toggleInputError('login-email-wrapper', 'login-email', false);
 
+            currentAuthEmail = email; // Store for potential OTP redirect
             setBtnLoading(btn, true);
 
             try {
@@ -441,6 +443,17 @@
 
                 if (response.ok) {
                     triggerCinematicRedirect();
+                } else if (response.status === 403 && data.code === 'UNVERIFIED') {
+                    // Critical Fix: Redirect unverified users to OTP screen automatically
+                    Swal.fire({
+                        icon: 'info', title: 'Verification Required',
+                        text: 'We just sent a new 6-digit code to your email. Please verify your account to continue.',
+                        background: '#1B1B1B', color: '#F5F5F5', confirmButtonColor: '#D4A017',
+                        customClass: { popup: 'border border-gray-700 rounded-2xl' }
+                    }).then(() => {
+                        toggleAuthMode('verify');
+                    });
+                    setBtnLoading(btn, false);
                 } else if (response.status === 429) {
                     Swal.fire({
                         icon: 'warning', title: 'Too Many Attempts',
@@ -475,7 +488,6 @@
             const confirmPwd = document.getElementById('reg-confirm').value;
             const termsAgreed = document.getElementById('reg-terms').checked;
 
-            // Strict Validations
             let isValid = true;
             if (!validateUsername(username)) { toggleInputError('reg-username-wrapper', 'reg-username', true); isValid = false; }
             else { toggleInputError('reg-username-wrapper', 'reg-username', false); }
@@ -497,7 +509,6 @@
                 isValid = false;
             }
 
-            // Reject if zxcvbn score is too low (0 or 1)
             const pwdScore = zxcvbn(password).score;
             if (pwdScore < 2 && password.length > 0) {
                 Toast.fire({ icon: 'error', title: 'Password is too weak. Please improve it.' });
@@ -506,6 +517,7 @@
 
             if (!isValid) return;
 
+            currentAuthEmail = email; // Store for OTP verification
             setBtnLoading(btn, true);
 
             try {
@@ -525,7 +537,7 @@
                         background: '#1B1B1B', color: '#F5F5F5', confirmButtonColor: '#2ECC71',
                         customClass: { popup: 'border border-gray-700 rounded-2xl' }
                     }).then(() => {
-                        toggleAuthMode('verify'); // Switch to OTP View
+                        toggleAuthMode('verify');
                     });
                 } else {
                     Swal.fire({
@@ -556,11 +568,11 @@
                 const response = await fetch('/api/auth/verify-email', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
-                    body: JSON.stringify({ code })
+                    body: JSON.stringify({ email: currentAuthEmail, code })
                 });
 
                 if (response.ok) {
-                    triggerCinematicRedirect(); // Verification passed, let them in!
+                    triggerCinematicRedirect();
                 } else {
                     Toast.fire({ icon: 'error', title: 'Invalid or expired code.' });
                     setBtnLoading(btn, false);
@@ -622,8 +634,17 @@
         const app = {
             auth: {
                 async resendOTP() {
+                    if(!currentAuthEmail) return Toast.fire({ icon: 'error', title: 'Email session lost. Please login again.' });
                     Toast.fire({ icon: 'info', title: 'Sending new code...' });
-                    // fetch('/api/auth/resend-otp', ...)
+                    try {
+                        const res = await fetch('/api/auth/resend-otp', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCsrfToken() },
+                            body: JSON.stringify({ email: currentAuthEmail })
+                        });
+                        if (res.ok) Toast.fire({ icon: 'success', title: 'New code sent to your email.' });
+                        else Toast.fire({ icon: 'error', title: 'Failed to resend code. Try again later.' });
+                    } catch (e) { Toast.fire({ icon: 'error', title: 'Network error.' }); }
                 }
             },
             sso: {
