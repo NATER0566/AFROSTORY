@@ -1,17 +1,22 @@
 import User from '../models/User.js';
 import { requireAuth } from '../middleware/auth.js';
 import { v2 as cloudinary } from 'cloudinary';
+import streamifier from 'streamifier'; // <-- THE NATER-PAY FIX
 import bcrypt from 'bcryptjs';
 
 export default async function profileRoutes(fastify, options) {
 
-  // 1. UPLOAD AVATAR TO CLOUDINARY
+  // ==========================================
+  // 1. INSTANT AVATAR UPLOAD (BUFFER METHOD)
+  // ==========================================
   fastify.post('/avatar', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
       const data = await req.file();
       if (!data) return reply.code(400).send({ success: false, message: 'No file uploaded.' });
 
-      // Wrap Cloudinary stream in a promise
+      // Convert to Buffer to prevent the infinite hang!
+      const fileBuffer = await data.toBuffer();
+
       const uploadPromise = new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           { folder: 'afrostory/avatars', transformation: [{ width: 400, height: 400, crop: 'fill' }] },
@@ -20,12 +25,12 @@ export default async function profileRoutes(fastify, options) {
             else resolve(result);
           }
         );
-        data.file.pipe(stream);
+        // Cleanly pipe the buffer to Cloudinary
+        streamifier.createReadStream(fileBuffer).pipe(stream);
       });
 
       const result = await uploadPromise;
       
-      // Update User Database
       const user = await User.findByIdAndUpdate(
         req.user.userId, 
         { avatarUrl: result.secure_url }, 
@@ -39,13 +44,14 @@ export default async function profileRoutes(fastify, options) {
     }
   });
 
+  // ==========================================
   // 2. UPDATE PROFILE DETAILS
+  // ==========================================
   fastify.post('/update', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
       const { username, email, pin } = req.body;
       const updates = { username, email };
 
-      // If user provided a new PIN, hash it and save it
       if (pin && pin.length === 4) {
         const salt = await bcrypt.genSalt(10);
         updates.pinHash = await bcrypt.hash(pin, salt);
