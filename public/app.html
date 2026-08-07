@@ -979,7 +979,9 @@
                     }
                 },
                 
-                // FIXED: Avatar Upload Handler
+                // ===============================================
+                // RAW FETCH - MATCHING NATER-PAY ARCHITECTURE
+                // ===============================================
                 async uploadAvatar(e) {
                     const file = e.target.files[0];
                     if(!file) return;
@@ -993,8 +995,20 @@
                     try {
                         const formData = new FormData();
                         formData.append('avatar', file);
-                        const res = await app.httpClient.request('/profile/avatar', { method: 'POST', body: formData });
-                        app.state.user.avatarUrl = res.avatarUrl;
+
+                        const token = getCsrfToken();
+                        
+                        // Use raw fetch to prevent httpClient from overriding boundaries
+                        const res = await fetch('/api/profile/avatar', {
+                            method: 'POST',
+                            headers: { 'X-CSRF-Token': token },
+                            body: formData
+                        });
+
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || 'Upload failed');
+
+                        app.state.user.avatarUrl = data.avatarUrl;
                         app.ui.hydrateUserUI();
                         app.toast.fire({ icon: 'success', title: 'Avatar Updated Successfully' });
                     } catch (err) { 
@@ -1006,7 +1020,9 @@
                     }
                 },
 
-                // FIXED: Massive Video Upload Engine
+                // ===============================================
+                // RAW FETCH - MATCHING NATER-PAY ARCHITECTURE
+                // ===============================================
                 async submitContentUpload(e) {
                     e.preventDefault();
                     const form = e.target;
@@ -1028,10 +1044,9 @@
                     // Create an Abort Controller to allow cancelling!
                     const controller = new AbortController();
 
-                    // Lock the entire screen with a SweetAlert, but add a Cancel button!
                     Swal.fire({
-                        title: 'Uploading to Vault...',
-                        html: '<p class="mb-4">Please keep this page open.</p><b class="text-accent text-sm bg-gray-800 p-3 rounded-lg block">Large video files can take several minutes to upload depending on your network speed.</b>',
+                        title: 'Deploying to Network...',
+                        html: '<p class="mb-4 text-sm text-gray-300">Authenticating and uploading securely. Please wait.</p><b class="text-accent text-sm bg-gray-800 p-3 rounded-lg block">Large video files can take several minutes to upload depending on your network speed.</b>',
                         allowOutsideClick: false,
                         allowEscapeKey: false,
                         showConfirmButton: false,
@@ -1042,7 +1057,7 @@
                         didOpen: () => { Swal.showLoading(); }
                     }).then((result) => {
                         if (result.isDismissed) {
-                            controller.abort(); // KILL THE UPLOAD IF THEY CLICK CANCEL
+                            controller.abort();
                             app.toast.fire({ icon: 'info', title: 'Upload Cancelled by User' });
                         }
                     });
@@ -1057,8 +1072,18 @@
                         formData.append('coverImage', coverImage);
                         formData.append('videoFile', videoFile);
                         
-                        // Pass the signal to our fetch request so it can be aborted!
-                        await app.httpClient.request('/studio/upload', { method: 'POST', body: formData, signal: controller.signal }, 0);
+                        const token = getCsrfToken();
+
+                        // Use raw fetch to prevent httpClient from overriding boundaries
+                        const res = await fetch('/api/studio/upload', {
+                            method: 'POST',
+                            headers: { 'X-CSRF-Token': token },
+                            body: formData,
+                            signal: controller.signal
+                        });
+
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || 'Upload failed');
                         
                         Swal.fire({
                             icon: 'success', title: 'Content Published!',
@@ -1072,7 +1097,7 @@
                         document.getElementById('upload-video-label').innerText = 'Select Video File';
                         this.fetchStudioStats();
                     } catch (err) {
-                        if (err.name === 'AbortError') return; // Do nothing, we handled it above
+                        if (err.name === 'AbortError') return; 
                         
                         Swal.fire({
                             icon: 'error', title: 'Upload Failed',
