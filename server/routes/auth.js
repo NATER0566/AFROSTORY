@@ -32,56 +32,56 @@ export default async function authRoutes(fastify, options) {
   const generateOTP = () => crypto.randomInt(100000, 999999).toString();
 
   // ==========================================
-  // HELPER: BEAUTIFUL RESEND EMAIL ENGINE
+  // HELPER: MOBILE-OPTIMIZED RESEND EMAIL ENGINE
   // ==========================================
-  const sendRealEmail = async (email, otpCode) => {
+  // I updated this to accept 'title' and 'message' so we can reuse the beautiful template for Password Resets too!
+  const sendRealEmail = async (email, otpCode, subject = 'Your AfroStory Verification Code', title = 'Unlock the Vault', message = 'Welcome to the premier platform for African storytelling. Please use the secure authorization code below to verify your device.') => {
     try {
-      // Fallback to console if you forget to add the API key to Render
       if (!process.env.RESEND_API_KEY) {
-        console.log(`\n=== MOCK EMAIL (No API Key Found) ===\nTo: ${email}\nCode: ${otpCode}\n=====================================\n`);
+        console.log(`\n=== MOCK EMAIL (No API Key Found) ===\nTo: ${email}\nSubject: ${subject}\nCode: ${otpCode}\n=====================================\n`);
         return;
       }
 
       const resend = new Resend(process.env.RESEND_API_KEY);
 
-      // The Cinematic AfroStory HTML Template
+      // The Cinematic AfroStory HTML Template - Fully Optimized for Mobile
       const htmlTemplate = `
-        <div style="background-color: #000000; padding: 40px 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #F5F5F5;">
-          <div style="max-width: 600px; margin: 0 auto; background-color: #111111; border: 1px solid #222222; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+        <div style="background-color: #000000; padding: 20px 10px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #F5F5F5;">
+          <div style="max-width: 500px; margin: 0 auto; background-color: #111111; border: 1px solid #222222; border-radius: 12px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.8);">
             
             <!-- Header -->
-            <div style="text-align: center; padding: 40px 20px 20px 20px;">
-              <h1 style="font-size: 32px; font-weight: 900; letter-spacing: 6px; margin: 0; color: #D4A017;">
+            <div style="text-align: center; padding: 30px 10px 10px 10px;">
+              <h1 style="font-size: 28px; font-weight: 900; letter-spacing: 2px; margin: 0; color: #D4A017; white-space: nowrap;">
                 AFRO<span style="color: #F5F5F5;">STORY</span>
               </h1>
-              <div style="height: 2px; background: linear-gradient(90deg, transparent, #D4A017, transparent); margin: 20px auto 0 auto; width: 50%;"></div>
+              <div style="height: 2px; background: linear-gradient(90deg, transparent, #D4A017, transparent); margin: 15px auto 0 auto; width: 60%;"></div>
             </div>
             
             <!-- Body -->
-            <div style="padding: 0 40px 30px 40px; text-align: center;">
-              <h2 style="font-size: 24px; font-weight: 600; margin: 0 0 15px 0; color: #FFFFFF;">Unlock the Vault</h2>
-              <p style="color: #AAAAAA; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
-                Welcome to the premier platform for African storytelling. Please use the secure authorization code below to verify your device and access your account.
+            <div style="padding: 0 20px 30px 20px; text-align: center;">
+              <h2 style="font-size: 22px; font-weight: 600; margin: 0 0 10px 0; color: #FFFFFF;">${title}</h2>
+              <p style="color: #AAAAAA; font-size: 15px; line-height: 1.5; margin: 0 0 25px 0;">
+                ${message}
               </p>
               
-              <!-- OTP Box -->
-              <div style="background-color: #1B1B1B; border: 1px solid #333333; border-radius: 12px; padding: 30px; text-align: center; margin-bottom: 30px; box-shadow: inset 0 2px 15px rgba(0,0,0,0.5);">
-                <p style="color: #777777; font-size: 12px; text-transform: uppercase; letter-spacing: 3px; margin: 0 0 15px 0;">Your Secure Code</p>
-                <h1 style="font-size: 48px; font-weight: 900; letter-spacing: 16px; margin: 0 0 0 16px; color: #D4A017; text-shadow: 0 0 20px rgba(212,160,23,0.4);">
+              <!-- OTP Box - Fixed Mobile Breaking -->
+              <div style="background-color: #1B1B1B; border: 1px solid #333333; border-radius: 10px; padding: 20px 10px; text-align: center; margin-bottom: 25px; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);">
+                <p style="color: #777777; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin: 0 0 10px 0; white-space: nowrap;">Your Secure Code</p>
+                <h1 style="font-size: 38px; font-weight: 900; letter-spacing: 8px; margin: 0; color: #D4A017; text-shadow: 0 0 15px rgba(212,160,23,0.3); white-space: nowrap;">
                   ${otpCode}
                 </h1>
               </div>
               
-              <p style="color: #888888; font-size: 14px; margin: 0;">
+              <p style="color: #888888; font-size: 13px; margin: 0;">
                 For your security, this code will automatically expire in <strong>15 minutes</strong>.
               </p>
             </div>
             
             <!-- Footer -->
-            <div style="background-color: #0A0A0A; padding: 25px; text-align: center; border-top: 1px solid #222222;">
-              <p style="color: #555555; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; margin: 0;">
+            <div style="background-color: #0A0A0A; padding: 20px; text-align: center; border-top: 1px solid #222222;">
+              <p style="color: #555555; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin: 0;">
                 Engineered & Secured By<br>
-                <span style="color: #D4A017; font-weight: bold; font-size: 12px; line-height: 2.5;">NATER GRACE CODE</span>
+                <span style="color: #D4A017; font-weight: bold; font-size: 11px; line-height: 2.5; white-space: nowrap;">NATER GRACE CODE</span>
               </p>
             </div>
             
@@ -90,16 +90,13 @@ export default async function authRoutes(fastify, options) {
       `;
 
       const { data, error } = await resend.emails.send({
-        from: 'AfroStory <onboarding@resend.dev>', // Change to your custom domain once verified on Resend
+        from: 'AfroStory <onboarding@resend.dev>', 
         to: email,
-        subject: 'Your AfroStory Verification Code',
+        subject: subject,
         html: htmlTemplate
       });
 
-      if (error) {
-        throw new Error(error.message);
-      }
-
+      if (error) throw new Error(error.message);
       console.log(`✅ Real Email beautifully sent to ${email} (ID: ${data.id})`);
     } catch (error) {
       console.error('❌ Resend API Error:', error.message);
@@ -141,9 +138,7 @@ export default async function authRoutes(fastify, options) {
       await Wallet.create([{ userId: newUser._id }], { session });
       await session.commitTransaction();
       
-      // TRIGGER THE BEAUTIFUL RESEND EMAIL
       await sendRealEmail(email, otpCode);
-
       return reply.code(201).send({ success: true, message: 'Account created successfully. OTP Sent.' });
 
     } catch (error) {
@@ -177,7 +172,6 @@ export default async function authRoutes(fastify, options) {
 
       setAuthSession(reply, user);
       return reply.code(200).send({ success: true, message: 'Account verified successfully.' });
-
     } catch (error) {
       req.log.error(`Verification Error: ${error.message}`);
       return reply.code(500).send({ success: false, message: 'Internal server error.' });
@@ -198,17 +192,13 @@ export default async function authRoutes(fastify, options) {
 
       const isMatch = await bcrypt.compare(password, user.passwordHash);
       if (!isMatch) return reply.code(401).send({ success: false, message: 'Invalid credentials.' });
-
       if (!user.isActive) return reply.code(403).send({ success: false, message: 'Account has been suspended.' });
 
       if (!user.isVerified) {
         const otpCode = generateOTP();
         const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
         await User.updateOne({ _id: user._id }, { otpCode, otpExpiry });
-        
-        // TRIGGER THE BEAUTIFUL RESEND EMAIL
         await sendRealEmail(email, otpCode);
-
         return reply.code(403).send({ 
             success: false, 
             code: 'UNVERIFIED', 
@@ -222,11 +212,7 @@ export default async function authRoutes(fastify, options) {
         success: true,
         message: 'Login successful',
         user: { 
-            id: user._id, 
-            username: user.username, 
-            role: user.role,
-            avatarUrl: user.avatarUrl,
-            brandName: user.brandName
+            id: user._id, username: user.username, role: user.role, avatarUrl: user.avatarUrl, brandName: user.brandName
         }
       });
     } catch (error) {
@@ -246,8 +232,6 @@ export default async function authRoutes(fastify, options) {
             const otpCode = generateOTP();
             const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
             await User.updateOne({ _id: user._id }, { otpCode, otpExpiry });
-            
-            // TRIGGER THE BEAUTIFUL RESEND EMAIL
             await sendRealEmail(email, otpCode);
         }
         return reply.code(200).send({ success: true, message: 'If the email exists, a new code was sent.' });
@@ -257,7 +241,71 @@ export default async function authRoutes(fastify, options) {
   });
 
   // ==========================================
-  // 5. GET CURRENT USER
+  // 5. FORGOT PASSWORD (NEW ENGINE)
+  // ==========================================
+  fastify.post('/forgot-password', async (req, reply) => {
+    const { email } = req.body;
+    if (!email) return reply.code(400).send({ success: false, message: 'Email is required' });
+
+    try {
+      const user = await User.findOne({ email });
+      
+      // We always return success to prevent hackers from guessing which emails exist in your DB
+      if (user) {
+        const otpCode = generateOTP();
+        const otpExpiry = new Date(Date.now() + 15 * 60 * 1000);
+        await User.updateOne({ _id: user._id }, { otpCode, otpExpiry });
+
+        await sendRealEmail(
+          email, 
+          otpCode, 
+          'Reset Your AfroStory Password', 
+          'Password Reset', 
+          'We received a request to reset your password. Use the secure code below to set a new password.'
+        );
+      }
+
+      return reply.code(200).send({ success: true, message: 'If the email exists, a reset code has been sent.' });
+    } catch (error) {
+      req.log.error(`Forgot Password Error: ${error.message}`);
+      return reply.code(500).send({ success: false, message: 'System error' });
+    }
+  });
+
+  // ==========================================
+  // 6. RESET PASSWORD (NEW ENGINE)
+  // ==========================================
+  fastify.post('/reset-password', async (req, reply) => {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return reply.code(400).send({ success: false, message: 'All fields are required' });
+    }
+
+    try {
+      const user = await User.findOne({ email }).select('+otpCode +otpExpiry');
+      
+      if (!user) return reply.code(400).send({ success: false, message: 'Invalid request' });
+      if (user.otpCode !== code || user.otpExpiry < Date.now()) {
+        return reply.code(400).send({ success: false, message: 'Invalid or expired code.' });
+      }
+
+      // Hash the new password and clear the OTP so it can't be reused
+      const salt = await bcrypt.genSalt(10);
+      user.passwordHash = await bcrypt.hash(newPassword, salt);
+      user.otpCode = undefined;
+      user.otpExpiry = undefined;
+      await user.save();
+
+      return reply.code(200).send({ success: true, message: 'Password has been reset successfully. You can now log in.' });
+    } catch (error) {
+      req.log.error(`Reset Password Error: ${error.message}`);
+      return reply.code(500).send({ success: false, message: 'System error' });
+    }
+  });
+
+  // ==========================================
+  // 7. GET CURRENT USER
   // ==========================================
   fastify.get('/me', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
@@ -272,15 +320,9 @@ export default async function authRoutes(fastify, options) {
       return reply.code(200).send({
         success: true,
         user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-          country: user.country,
-          avatarUrl: user.avatarUrl,
-          brandName: user.brandName,
-          adUnlocksRemaining: user.adUnlocksRemaining,
-          balance: wallet ? wallet.storyCoins.toString() : "0.00"
+          id: user._id, username: user.username, email: user.email, role: user.role,
+          country: user.country, avatarUrl: user.avatarUrl, brandName: user.brandName,
+          adUnlocksRemaining: user.adUnlocksRemaining, balance: wallet ? wallet.storyCoins.toString() : "0.00"
         }
       });
     } catch (error) {
