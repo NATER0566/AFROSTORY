@@ -1,28 +1,26 @@
 import Comment from '../models/Comment.js';
-import Episode from '../models/Episode.js';
+import Series from '../models/Series.js';
 import { requireAuth } from '../middleware/auth.js';
 
 export default async function commentRoutes(fastify, options) {
 
   // ==========================================
-  // 1. FETCH COMMENTS FOR AN EPISODE (High Speed)
+  // 1. FETCH COMMENTS FOR A SERIES/MOVIE
   // ==========================================
-  fastify.get('/:episodeId', async (req, reply) => {
+  fastify.get('/:seriesId', async (req, reply) => {
     try {
-      const { episodeId } = req.params;
+      const { seriesId } = req.params;
       const { page = 1, limit = 20 } = req.query;
       const skip = (page - 1) * limit;
 
-      // Use .lean() for maximum JSON speed. 
-      // Populate grabs just the username to keep the payload lightweight.
-      const comments = await Comment.find({ episodeId })
+      const comments = await Comment.find({ seriesId })
         .sort({ isPinned: -1, createdAt: -1 }) // Pinned comments always on top
         .skip(skip)
         .limit(Number(limit))
         .populate('userId', 'username') 
-        .lean();
+        .lean(); // Maximum JSON speed
 
-      const total = await Comment.countDocuments({ episodeId });
+      const total = await Comment.countDocuments({ seriesId });
 
       return reply.code(200).send({
         success: true,
@@ -36,11 +34,11 @@ export default async function commentRoutes(fastify, options) {
   });
 
   // ==========================================
-  // 2. POST A NEW COMMENT (Real-Time Broadcast)
+  // 2. POST A NEW COMMENT
   // ==========================================
-  fastify.post('/:episodeId', { preHandler: [requireAuth] }, async (req, reply) => {
+  fastify.post('/:seriesId', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
-      const { episodeId } = req.params;
+      const { seriesId } = req.params;
       const { text } = req.body;
       const userId = req.user.userId;
 
@@ -48,28 +46,25 @@ export default async function commentRoutes(fastify, options) {
         return reply.code(400).send({ success: false, message: 'Comment cannot be empty.' });
       }
 
-      // Verify episode exists before allowing a comment
-      const episodeExists = await Episode.exists({ _id: episodeId });
-      if (!episodeExists) {
-        return reply.code(404).send({ success: false, message: 'Episode not found.' });
+      // Verify Series/Movie exists
+      const seriesExists = await Series.exists({ _id: seriesId });
+      if (!seriesExists) {
+        return reply.code(404).send({ success: false, message: 'Content not found.' });
       }
 
-      // Save to MongoDB
       const newComment = await Comment.create({
-        episodeId,
+        seriesId,
         userId,
         text: text.trim()
       });
 
-      // Populate user data before broadcasting so the UI shows the commenter's name
       const populatedComment = await Comment.findById(newComment._id)
         .populate('userId', 'username')
         .lean();
 
-      // ENTERPRISE WEBSOCKET MAGIC: 
-      // Instantly broadcast the comment to everyone connected to the Fastify server
+      // Broadcast to all active viewers
       if (fastify.io) {
-        fastify.io.emit(`new_comment_${episodeId}`, populatedComment);
+        fastify.io.emit(`new_comment_${seriesId}`, populatedComment);
       }
 
       return reply.code(201).send({
@@ -97,8 +92,8 @@ export default async function commentRoutes(fastify, options) {
         return reply.code(404).send({ success: false, message: 'Comment not found.' });
       }
 
-      // Strict Security: Only the author or an ADMIN can delete it
-      if (comment.userId.toString() !== userId && role !== 'ADMIN') {
+      // Strict Security: Only the author, ADMIN, or OWNER can delete it
+      if (comment.userId.toString() !== userId && !['ADMIN', 'OWNER'].includes(role)) {
         return reply.code(403).send({ success: false, message: 'Unauthorized to delete this comment.' });
       }
 
