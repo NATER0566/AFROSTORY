@@ -461,7 +461,6 @@
                         </div>
                     </div>
                     
-                    <!-- NEW: USERS BY REGION -->
                     <div class="bg-surface border border-gray-800 rounded-xl p-6 mt-6">
                         <h3 class="text-xl font-bold mb-4 border-b border-gray-800 pb-2">Users by Region</h3>
                         <div id="admin-region-stats" class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -548,8 +547,8 @@
 
                 <div class="pt-4 border-t border-gray-800 flex justify-end space-x-3">
                     <button type="button" onclick="app.ui.closeUploadModal()" class="px-6 py-2.5 rounded-lg font-bold text-gray-400 hover:text-white hover:bg-gray-800 transition-colors focus-ring">Cancel</button>
-                    <button type="submit" id="btn-submit-upload" class="bg-accent text-background px-8 py-2.5 rounded-lg font-black hover:bg-yellow-600 transition-colors shadow-lg flex items-center focus-ring">
-                        <span id="upload-btn-text">Publish Content</span>
+                    <button type="submit" class="bg-accent text-background px-8 py-2.5 rounded-lg font-black hover:bg-yellow-600 transition-colors shadow-lg flex items-center focus-ring">
+                        Publish Content
                     </button>
                 </div>
             </form>
@@ -744,17 +743,15 @@
 
                 async fetchListsData() {
                     try {
-                        const continueDataMock = [
-                            { _id: 'c1', title: 'The Awakening', type: 'Series • Ep 1', access: 'Free', img: 'https://images.unsplash.com/photo-1604028297235-db715019a844?w=400&q=80', progress: 45 },
-                            { _id: 'c2', title: 'Lagos Hustle', type: 'Series • Ep 3', access: 'Premium', img: 'https://images.unsplash.com/photo-1533613220915-609f661a6fe1?w=400&q=80', progress: 80 }
-                        ];
-
-                        const continueData = continueDataMock; 
+                        // FIXED: Replaced Mock Data with actual API call to database
+                        const continueData = await app.httpClient.request('/history/continue').catch(() => []);
                         const favoritesData = await app.httpClient.request('/favorites').catch(() => []);
                         
                         if (continueData.length > 0) {
                             document.getElementById('discover-continue-container').classList.remove('d-none');
                             app.ui.renderGrid('discover-continue-grid', continueData, false);
+                        } else {
+                            document.getElementById('discover-continue-container').classList.add('d-none');
                         }
 
                         app.ui.renderGrid('continue-grid', continueData, true, "You have not started watching anything yet.", "play-circle");
@@ -797,7 +794,8 @@
 
                 async markNotificationsRead() {
                     const btn = document.getElementById('mark-read-btn');
-                    app.ui.setLoading(btn, true, 'Marking...');
+                    const originalText = btn.innerHTML;
+                    btn.innerHTML = 'Marking...';
                     try {
                         await app.httpClient.request('/notifications/read', { method: 'POST' });
                         document.getElementById('ui-notif-badge').classList.add('d-none');
@@ -806,7 +804,7 @@
                         });
                         app.toast.fire({ icon: 'success', title: 'Marked as read' });
                     } catch (err) { app.toast.fire({ icon: 'error', title: 'Failed to update' }); } 
-                    finally { app.ui.setLoading(btn, false, 'Mark all as read'); }
+                    finally { btn.innerHTML = originalText; }
                 },
 
                 async fetchStudioStats() {
@@ -835,7 +833,6 @@
                             document.getElementById('admin-users').innerText = app.ui.escapeHTML(stats.totalUsers?.toString() || "0");
                             document.getElementById('admin-content').innerText = app.ui.escapeHTML(stats.totalContent?.toString() || "0");
 
-                            // NEW: Render Region Stats with Flags
                             const regionContainer = document.getElementById('admin-region-stats');
                             if (stats.usersByCountry && stats.usersByCountry.length > 0) {
                                 let regionHtml = '';
@@ -862,7 +859,6 @@
                     } catch (e) {}
                 },
 
-                // Search
                 setSearchFilter(type) {
                     app.state.content.searchFilter = type;
                     document.querySelectorAll('.search-filter-btn').forEach(btn => {
@@ -899,7 +895,6 @@
                     }
                 },
 
-                // Comments (Fixed Endpoints)
                 async fetchComments(seriesId) {
                     const listContainer = document.getElementById('comments-list');
                     try {
@@ -938,7 +933,9 @@
                     if(!text) return;
                     
                     const btn = document.getElementById('btn-submit-comment');
-                    app.ui.setLoading(btn, true, '...');
+                    const ogHtml = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = `<span class="animate-pulse">...</span>`;
                     
                     try {
                         await app.httpClient.request(`/comments/${app.state.content.currentSeriesId}`, {
@@ -950,11 +947,11 @@
                     } catch(err) {
                         app.toast.fire({ icon: 'error', title: 'Failed to post comment' });
                     } finally {
-                        app.ui.setLoading(btn, false, 'Post');
+                        btn.disabled = false;
+                        btn.innerHTML = ogHtml;
                     }
                 },
 
-                // Profile Updates
                 async updateProfile(e) {
                     e.preventDefault();
                     const form = e.target;
@@ -966,7 +963,10 @@
                     if(username.length < 3) return app.toast.fire({ icon: 'error', title: 'Username must be at least 3 chars' });
                     if(pin && pin.length !== 4) return app.toast.fire({ icon: 'error', title: 'PIN must be 4 digits' });
 
-                    app.ui.setLoading(btn, true, 'Saving...');
+                    const ogHtml = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = `<span class="animate-pulse">Saving...</span>`;
+                    
                     try {
                         const res = await app.httpClient.request('/profile/update', { method: 'POST', body: JSON.stringify({ username, email, pin }) });
                         app.state.user = { ...app.state.user, ...res.user };
@@ -974,7 +974,10 @@
                         app.toast.fire({ icon: 'success', title: 'Profile Updated' });
                         form.pin.value = ''; 
                     } catch (err) { app.toast.fire({ icon: 'error', title: err.message }); } 
-                    finally { app.ui.setLoading(btn, false, 'Save Changes'); }
+                    finally { 
+                        btn.disabled = false;
+                        btn.innerHTML = ogHtml; 
+                    }
                 },
                 
                 async uploadAvatar(e) {
@@ -983,7 +986,10 @@
                     if (file.size > 5 * 1024 * 1024) return app.toast.fire({ icon: 'error', title: 'Image must be less than 5MB' });
                     
                     const btn = document.getElementById('btn-change-avatar');
-                    app.ui.setLoading(btn, true, 'Uploading...');
+                    const ogHtml = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = `<span class="animate-pulse">Uploading...</span>`;
+                    
                     try {
                         const formData = new FormData();
                         formData.append('avatar', file);
@@ -992,14 +998,17 @@
                         app.ui.hydrateUserUI();
                         app.toast.fire({ icon: 'success', title: 'Avatar Updated' });
                     } catch (err) { app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' }); } 
-                    finally { app.ui.setLoading(btn, false, 'Change Avatar'); e.target.value = ''; }
+                    finally { 
+                        btn.disabled = false;
+                        btn.innerHTML = ogHtml; 
+                        e.target.value = ''; 
+                    }
                 },
 
-                // Studio Upload
+                // FIXED: Massive Video Upload Engine
                 async submitContentUpload(e) {
                     e.preventDefault();
                     const form = e.target;
-                    const btn = document.getElementById('btn-submit-upload');
                     
                     const title = form.title.value.trim();
                     const type = form.type.value;
@@ -1012,8 +1021,19 @@
                     if (!coverImage || !videoFile) return app.toast.fire({ icon: 'error', title: 'Both Image and Video files are required' });
                     if (access === 'Premium' && (!coinCost || coinCost < 1)) return app.toast.fire({ icon: 'error', title: 'Set a valid coin price' });
 
-                    btn.disabled = true;
-                    btn.innerHTML = `<span class="animate-pulse">Uploading...</span>`;
+                    // Close the upload modal immediately so the user can see the progress blocker
+                    app.ui.closeUploadModal();
+
+                    // Lock the entire screen with a SweetAlert so they don't click anything while the video uploads
+                    Swal.fire({
+                        title: 'Uploading to Vault...',
+                        html: 'Please do not close or refresh this page.<br><br><b class="text-accent">Processing heavy video files takes time...</b>',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        background: '#1B1B1B', color: '#F5F5F5',
+                        didOpen: () => { Swal.showLoading(); }
+                    });
 
                     try {
                         const formData = new FormData();
@@ -1025,23 +1045,30 @@
                         formData.append('coverImage', coverImage);
                         formData.append('videoFile', videoFile);
                         
-                        await app.httpClient.request('/studio/upload', { method: 'POST', body: formData });
+                        // CRITICAL: We pass "0" as the third argument to stop the HTTP client from retrying if it takes a long time!
+                        await app.httpClient.request('/studio/upload', { method: 'POST', body: formData }, 0);
                         
-                        app.toast.fire({ icon: 'success', title: 'Content published successfully!' });
-                        app.ui.closeUploadModal();
+                        Swal.fire({
+                            icon: 'success', title: 'Content Published!',
+                            text: 'Your video is now successfully live on AfroStory.',
+                            background: '#1B1B1B', color: '#F5F5F5', confirmButtonColor: '#2ECC71',
+                            customClass: { popup: 'border border-gray-700 rounded-2xl' }
+                        });
+                        
                         form.reset();
                         document.getElementById('upload-cover-label').innerText = 'Select Image (JPG/PNG)';
                         document.getElementById('upload-video-label').innerText = 'Select Video File';
                         this.fetchStudioStats();
                     } catch (err) {
-                        app.toast.fire({ icon: 'error', title: err.message || 'Upload failed' });
-                    } finally {
-                        btn.disabled = false;
-                        btn.innerHTML = `Publish Content`;
+                        Swal.fire({
+                            icon: 'error', title: 'Upload Failed',
+                            text: err.message || 'The server took too long or the file was rejected.',
+                            background: '#1B1B1B', color: '#F5F5F5', confirmButtonColor: '#E74C3C',
+                            customClass: { popup: 'border border-gray-700 rounded-2xl' }
+                        });
                     }
                 },
 
-                // Finance
                 async fundWallet(btn) {
                     try {
                         const { value: amount } = await Swal.fire({
@@ -1050,12 +1077,17 @@
                             inputValidator: (val) => { if (!val || val <= 0) return 'Enter a valid amount'; }
                         });
                         if (amount) {
-                            app.ui.setLoading(btn, true, 'Connecting Paystack...');
-                            const res = await app.httpClient.request('/wallet/fund', { method: 'POST', body: JSON.stringify({ amount }) });
-                            if (res.authorization_url) window.location.href = res.authorization_url;
+                            const ogHtml = btn.innerHTML;
+                            btn.disabled = true;
+                            btn.innerHTML = `<span class="animate-pulse">Connecting Paystack...</span>`;
+                            try {
+                                const res = await app.httpClient.request('/wallet/fund', { method: 'POST', body: JSON.stringify({ amount }) });
+                                if (res.authorization_url) window.location.href = res.authorization_url;
+                            } finally {
+                                btn.disabled = false; btn.innerHTML = ogHtml;
+                            }
                         }
                     } catch (err) { app.toast.fire({ icon: 'error', title: err.message }); } 
-                    finally { app.ui.setLoading(btn, false, 'Fund via Paystack'); }
                 },
 
                 async withdrawFunds(btn) {
@@ -1073,13 +1105,18 @@
                         });
 
                         if (isConfirmed && value) {
-                            app.ui.setLoading(btn, true, 'Processing...');
-                            await app.httpClient.request('/wallet/withdraw', { method: 'POST', body: JSON.stringify(value) });
-                            app.toast.fire({ icon: 'success', title: 'Withdrawal Initiated' });
-                            this.fetchWalletData();
+                            const ogHtml = btn.innerHTML;
+                            btn.disabled = true;
+                            btn.innerHTML = `<span class="animate-pulse">Processing...</span>`;
+                            try {
+                                await app.httpClient.request('/wallet/withdraw', { method: 'POST', body: JSON.stringify(value) });
+                                app.toast.fire({ icon: 'success', title: 'Withdrawal Initiated' });
+                                this.fetchWalletData();
+                            } finally {
+                                btn.disabled = false; btn.innerHTML = ogHtml;
+                            }
                         }
                     } catch (err) { app.toast.fire({ icon: 'error', title: err.message }); } 
-                    finally { app.ui.setLoading(btn, false, 'Withdraw to Bank'); }
                 },
 
                 async giftCreator(seriesId, btn) {
@@ -1115,21 +1152,23 @@
                 },
 
                 async toggleFavorite(seriesId, btn) {
-                    app.ui.setLoading(btn, true, '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>');
+                    btn.disabled = true;
+                    btn.innerHTML = '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>';
                     try {
                         await app.httpClient.request('/favorites/toggle', { method: 'POST', body: JSON.stringify({ seriesId }) });
                         app.toast.fire({ icon: 'success', title: 'Library Updated' });
                         this.fetchListsData();
                     } catch(err) { app.toast.fire({ icon: 'error', title: err.message }); }
-                    finally { app.ui.setLoading(btn, false, '<i data-lucide="plus"></i>'); lucide.createIcons(); }
+                    finally { btn.disabled = false; btn.innerHTML = '<i data-lucide="plus"></i>'; lucide.createIcons(); }
                 },
                 async likeSeries(seriesId, btn) {
-                    app.ui.setLoading(btn, true, '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>');
+                    btn.disabled = true;
+                    btn.innerHTML = '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>';
                     try {
                         await app.httpClient.request('/series/like', { method: 'POST', body: JSON.stringify({ seriesId }) });
                         app.toast.fire({ icon: 'success', title: 'Liked!' });
                     } catch(err) { app.toast.fire({ icon: 'error', title: err.message }); }
-                    finally { app.ui.setLoading(btn, false, '<i data-lucide="thumbs-up"></i>'); lucide.createIcons(); }
+                    finally { btn.disabled = false; btn.innerHTML = '<i data-lucide="thumbs-up"></i>'; lucide.createIcons(); }
                 },
                 async shareSeries(seriesId) {
                     try {
@@ -1140,12 +1179,14 @@
                 },
                 
                 async togglePushNotifications(btn) {
-                    app.ui.setLoading(btn, true, '...');
+                    const ogHtml = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = `<span class="animate-pulse">...</span>`;
                     try {
                         await app.httpClient.request('/settings/push', { method: 'POST' });
                         app.toast.fire({ icon: 'success', title: 'Preferences Saved' });
                     } catch (e) { app.toast.fire({ icon: 'error', title: 'Update failed' }); }
-                    finally { app.ui.setLoading(btn, false, 'Enable'); }
+                    finally { btn.disabled = false; btn.innerHTML = ogHtml; }
                 },
                 async updateLanguage(lang) {
                     try {
@@ -1216,7 +1257,6 @@
                             this.loadSeason(1);
                         }
 
-                        // Load comments for the series
                         app.api.fetchComments(seriesId);
 
                     } catch (err) {
@@ -1238,7 +1278,6 @@
                         let html = '';
                         episodes.forEach((ep, index) => {
                             const isLocked = !ep.isFree && !ep.unlocked;
-                            
                             const accessType = ep.coinCost > 0 ? 'Premium' : 'Ad'; 
                             
                             const action = isLocked ? `app.paywall.showModal('${ep._id}', ${ep.coinCost}, '${accessType}')` : `app.player.play('${ep._id}', '${ep.mediaUrl}', ${ep.lastPosition || 0})`;
@@ -1370,20 +1409,12 @@
                     return div.innerHTML;
                 },
 
-                setLoading(btn, isLoading, originalHtml) {
-                    if (!btn) return;
-                    btn.disabled = isLoading;
-                    if (isLoading) btn.innerHTML = `<span class="animate-pulse">${originalHtml}</span>`;
-                    else btn.innerHTML = originalHtml;
-                },
-
                 hydrateUserUI() {
                     const u = app.state.user;
                     if(!u) return;
                     
                     const init = u.username ? app.ui.escapeHTML(u.username.charAt(0).toUpperCase()) : '?';
                     
-                    // Profile Page
                     document.getElementById('profile-username').value = app.ui.escapeHTML(u.username || '');
                     document.getElementById('profile-email').value = app.ui.escapeHTML(u.email || '');
                     if (u.avatarUrl) {
@@ -1398,14 +1429,10 @@
                         document.getElementById('ui-avatar-fallback').innerText = init;
                     }
 
-                    // Comment Avatar
                     document.getElementById('comment-user-avatar').innerText = init;
-
-                    // Headers & Badges & Fallbacks
                     document.getElementById('ui-username').innerText = `@${app.ui.escapeHTML(u.username)}`;
                     document.getElementById('ui-badge').innerText = app.ui.escapeHTML(u.role || 'Member');
                     
-                    // Studio
                     const defaultStudioName = u.username ? `${app.ui.escapeHTML(u.username).toUpperCase()} STUDIO` : 'CREATOR STUDIO';
                     document.getElementById('studio-brand').innerText = u.brandName ? app.ui.escapeHTML(u.brandName) : defaultStudioName;
                 },
@@ -1512,7 +1539,6 @@
                     lucide.createIcons();
                 },
 
-                // Studio Modal Logic
                 openUploadModal() {
                     const modal = document.getElementById('studio-upload-modal');
                     const content = document.getElementById('studio-upload-content');
@@ -1558,7 +1584,6 @@
                 }
             },
 
-            // --- SEARCH SYSTEM ---
             search: {
                 controller: null,
                 timeout: null,
@@ -1600,9 +1625,7 @@
             }
         };
 
-        // Boot Application
         document.addEventListener('DOMContentLoaded', () => { app.init(); });
     </script>
 </body>
 </html>
-
