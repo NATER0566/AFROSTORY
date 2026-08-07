@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 
 const commentSchema = new mongoose.Schema({
-  episodeId: { 
+  // --- CHANGED: Now attaches to the whole Series/Movie, not an individual episode
+  seriesId: { 
     type: mongoose.Schema.Types.ObjectId, 
-    ref: 'Episode', 
+    ref: 'Series', 
     required: true, 
     index: true 
   },
@@ -29,7 +30,7 @@ const commentSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Optimize query speed: We will always fetch comments by episodeId, sorted by newest
-commentSchema.index({ episodeId: 1, createdAt: -1 });
+// Optimize query speed for loading comments under a series
+commentSchema.index({ seriesId: 1, createdAt: -1 });
 
 export default mongoose.model('Comment', commentSchema);
