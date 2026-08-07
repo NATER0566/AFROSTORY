@@ -9,12 +9,10 @@ export default async function seriesRoutes(fastify, options) {
   // ==========================================
   fastify.get('/hero', async (req, reply) => {
     try {
-      // Find the most viewed ongoing series/movie for the big top banner
       const hero = await Series.findOne({ status: 'ONGOING' })
         .sort({ totalViews: -1 })
         .lean();
       
-      // Frontend expects a direct object, not wrapped in { success, data }
       return reply.code(200).send(hero || {});
     } catch (error) {
       req.log.error(`Hero Fetch Error: ${error.message}`);
@@ -27,19 +25,17 @@ export default async function seriesRoutes(fastify, options) {
   // ==========================================
   fastify.get('/trending', async (req, reply) => {
     try {
-      // Get top 10 series/movies sorted by views
       const trending = await Series.find({ status: 'ONGOING' })
         .sort({ totalViews: -1 })
         .limit(10)
         .lean();
       
-      // Map to fit the frontend UI card structure
       const formattedTrending = trending.map(item => ({
         _id: item._id,
         title: item.title,
-        type: item.type, // 'Movie' or 'Series'
+        type: item.type, 
         img: item.coverImage,
-        access: item.totalEpisodes > 0 ? 'Premium' : 'Free' // Just a fallback, true access is in Episode
+        access: item.totalEpisodes > 0 ? 'Premium' : 'Free' 
       }));
 
       return reply.code(200).send(formattedTrending);
@@ -90,7 +86,6 @@ export default async function seriesRoutes(fastify, options) {
   // ==========================================
   fastify.post('/', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
-      // SECURITY: Added OWNER role support
       if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) {
         return reply.code(403).send({ success: false, message: 'Unauthorized. Only Creators can launch a series.' });
       }
@@ -123,7 +118,46 @@ export default async function seriesRoutes(fastify, options) {
   });
 
   // ==========================================
-  // 5. GET SINGLE SERIES + EPISODE LIST
+  // 5. TOGGLE LIKE ON A SERIES/MOVIE
+  // ==========================================
+  fastify.post('/like', { preHandler: [requireAuth] }, async (req, reply) => {
+    try {
+      const { seriesId } = req.body;
+      const userId = req.user.userId;
+
+      if (!seriesId) {
+        return reply.code(400).send({ success: false, message: 'Series ID required' });
+      }
+
+      const series = await Series.findById(seriesId);
+      if (!series) {
+        return reply.code(404).send({ success: false, message: 'Content not found' });
+      }
+
+      const hasLiked = series.likes.includes(userId);
+
+      if (hasLiked) {
+        await Series.updateOne(
+          { _id: seriesId }, 
+          { $pull: { likes: userId } }
+        );
+        return reply.code(200).send({ success: true, message: 'Unliked', liked: false });
+      } else {
+        await Series.updateOne(
+          { _id: seriesId }, 
+          { $addToSet: { likes: userId } }
+        );
+        return reply.code(200).send({ success: true, message: 'Liked!', liked: true });
+      }
+      
+    } catch (error) {
+      req.log.error(`Like Series Error: ${error.message}`);
+      return reply.code(500).send({ success: false, message: 'Failed to process like.' });
+    }
+  });
+
+  // ==========================================
+  // 6. GET SINGLE SERIES + EPISODE LIST
   // ==========================================
   fastify.get('/:id', async (req, reply) => {
     try {
@@ -139,7 +173,7 @@ export default async function seriesRoutes(fastify, options) {
 
       const episodes = await Episode.find({ seriesId: id, status: 'PUBLISHED' })
         .sort({ episodeNumber: 1 })
-        .select('-mediaUrl') // CRITICAL SECURITY: Never leak the raw HLS video URL
+        .select('-mediaUrl') 
         .lean();
 
       return reply.code(200).send({
