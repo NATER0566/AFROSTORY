@@ -3,7 +3,7 @@ import Series from '../models/Series.js';
 import Episode from '../models/Episode.js';
 import { requireAuth } from '../middleware/auth.js';
 import { v2 as cloudinary } from 'cloudinary';
-import streamifier from 'streamifier'; // <-- THE NATER-PAY FIX
+import streamifier from 'streamifier';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -11,20 +11,31 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// ==========================================
-// UNIVERSAL CLOUDINARY UPLOADER (BUFFER BASED)
-// ==========================================
-function uploadMediaToCloudinary(buffer, folder, resourceType) {
+// IMAGE UPLOADER
+function uploadImageToCloudinary(buffer) {
   return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { folder: folder, resource_type: resourceType },
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'afrostory/covers', resource_type: 'image' },
       (error, result) => {
-        if (error) return reject(error);
-        resolve(result);
+        if (error) reject(error);
+        else resolve(result);
       }
     );
-    // Push the buffer cleanly into Cloudinary
-    streamifier.createReadStream(buffer).pipe(uploadStream);
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+}
+
+// VIDEO UPLOADER (CHUNKED FOR HUGE FILES)
+function uploadVideoToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_chunked_stream(
+      { folder: 'afrostory/videos', resource_type: 'video', chunk_size: 20 * 1024 * 1024 },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
   });
 }
 
@@ -59,31 +70,25 @@ export default async function studioRoutes(fastify, options) {
     } catch (error) { return reply.code(500).send({ success: false, message: 'Failed to fetch uploads.' }); }
   });
 
-  // ==========================================
-  // FAST SECURE MULTIPART UPLOAD
-  // ==========================================
   fastify.post('/upload', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
       if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) return reply.code(403).send({ success: false, message: 'Only creators can upload content.' });
-      if (!process.env.CLOUDINARY_CLOUD_NAME) return reply.code(500).send({ success: false, message: 'Cloudinary is not configured.' });
 
       const parts = req.parts();
       const fields = {};
       let coverImageUploaded = false;
       let videoUploaded = false;
 
-      // Process the multipart form data using the Buffer method
       for await (const part of parts) {
         if (part.type === 'file') {
-          // CONVERT TO BUFFER TO PREVENT HANGING
           const fileBuffer = await part.toBuffer();
 
           if (part.fieldname === 'coverImage') {
-            const imageResult = await uploadMediaToCloudinary(fileBuffer, 'afrostory/covers', 'image');
+            const imageResult = await uploadImageToCloudinary(fileBuffer);
             fields.coverImage = imageResult.secure_url;
             coverImageUploaded = true;
           } else if (part.fieldname === 'videoFile') {
-            const videoResult = await uploadMediaToCloudinary(fileBuffer, 'afrostory/videos', 'video');
+            const videoResult = await uploadVideoToCloudinary(fileBuffer);
             fields.videoFile = videoResult.secure_url;
             videoUploaded = true;
           }
