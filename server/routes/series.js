@@ -5,20 +5,63 @@ import { requireAuth } from '../middleware/auth.js';
 export default async function seriesRoutes(fastify, options) {
 
   // ==========================================
-  // 1. GET ALL SERIES (For the Discover Feed)
+  // 1. GET HERO BANNER (Must be before /:id)
+  // ==========================================
+  fastify.get('/hero', async (req, reply) => {
+    try {
+      // Find the most viewed ongoing series/movie for the big top banner
+      const hero = await Series.findOne({ status: 'ONGOING' })
+        .sort({ totalViews: -1 })
+        .lean();
+      
+      // Frontend expects a direct object, not wrapped in { success, data }
+      return reply.code(200).send(hero || {});
+    } catch (error) {
+      req.log.error(`Hero Fetch Error: ${error.message}`);
+      return reply.code(500).send({ success: false, message: 'Failed to load hero.' });
+    }
+  });
+
+  // ==========================================
+  // 2. GET TRENDING (Must be before /:id)
+  // ==========================================
+  fastify.get('/trending', async (req, reply) => {
+    try {
+      // Get top 10 series/movies sorted by views
+      const trending = await Series.find({ status: 'ONGOING' })
+        .sort({ totalViews: -1 })
+        .limit(10)
+        .lean();
+      
+      // Map to fit the frontend UI card structure
+      const formattedTrending = trending.map(item => ({
+        _id: item._id,
+        title: item.title,
+        type: item.type, // 'Movie' or 'Series'
+        img: item.coverImage,
+        access: item.totalEpisodes > 0 ? 'Premium' : 'Free' // Just a fallback, true access is in Episode
+      }));
+
+      return reply.code(200).send(formattedTrending);
+    } catch (error) {
+      req.log.error(`Trending Fetch Error: ${error.message}`);
+      return reply.code(500).send({ success: false, message: 'Failed to load trending.' });
+    }
+  });
+
+  // ==========================================
+  // 3. GET ALL SERIES (For the Discover Feed)
   // ==========================================
   fastify.get('/', async (req, reply) => {
     try {
       const { category, sort = 'popular', page = 1, limit = 10 } = req.query;
       
-      // Only serve series that are ready for the public
       const query = { status: 'ONGOING' }; 
 
       if (category) {
         query.tags = { $in: [category.toLowerCase()] };
       }
 
-      // Sort by views or newest
       const sortOption = sort === 'popular' ? { totalViews: -1 } : { createdAt: -1 };
       const skip = (page - 1) * limit;
 
@@ -26,8 +69,8 @@ export default async function seriesRoutes(fastify, options) {
         .sort(sortOption)
         .skip(skip)
         .limit(Number(limit))
-        .populate('creatorId', 'username brandName') // Only grab safe creator data
-        .lean(); // Strip Mongoose overhead for maximum JSON delivery speed
+        .populate('creatorId', 'username brandName') 
+        .lean(); 
 
       const total = await Series.countDocuments(query);
 
@@ -43,16 +86,16 @@ export default async function seriesRoutes(fastify, options) {
   });
 
   // ==========================================
-  // 2. CREATE A NEW SERIES (Protected)
+  // 4. CREATE A NEW SERIES (Protected)
   // ==========================================
   fastify.post('/', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
-      // SECURITY: Strictly block normal users from cluttering the database
-      if (req.user.role !== 'CREATOR' && req.user.role !== 'ADMIN') {
+      // SECURITY: Added OWNER role support
+      if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) {
         return reply.code(403).send({ success: false, message: 'Unauthorized. Only Creators can launch a series.' });
       }
 
-      const { title, description, coverImage, tags } = req.body;
+      const { title, description, type, coverImage, tags } = req.body;
 
       if (!title || !description || !coverImage) {
         return reply.code(400).send({ success: false, message: 'Title, description, and cover image are required.' });
@@ -62,14 +105,15 @@ export default async function seriesRoutes(fastify, options) {
         creatorId: req.user.userId,
         title,
         description,
+        type: type || 'Series',
         coverImage,
         tags: tags || [],
-        status: 'DRAFT' // Safely hide it from the public until episodes are uploaded
+        status: 'DRAFT' 
       });
 
       return reply.code(201).send({
         success: true,
-        message: 'Series created successfully.',
+        message: `${newSeries.type} created successfully.`,
         data: newSeries
       });
     } catch (error) {
@@ -79,7 +123,7 @@ export default async function seriesRoutes(fastify, options) {
   });
 
   // ==========================================
-  // 3. GET SINGLE SERIES + EPISODE LIST
+  // 5. GET SINGLE SERIES + EPISODE LIST
   // ==========================================
   fastify.get('/:id', async (req, reply) => {
     try {
@@ -93,10 +137,9 @@ export default async function seriesRoutes(fastify, options) {
         return reply.code(404).send({ success: false, message: 'Series not found.' });
       }
 
-      // Fetch all published episodes attached to this series, sorted chronologically
       const episodes = await Episode.find({ seriesId: id, status: 'PUBLISHED' })
         .sort({ episodeNumber: 1 })
-        .select('-mediaUrl') // CRITICAL SECURITY: Never leak the raw HLS video URL on the public listing.
+        .select('-mediaUrl') // CRITICAL SECURITY: Never leak the raw HLS video URL
         .lean();
 
       return reply.code(200).send({
