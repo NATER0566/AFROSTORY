@@ -557,6 +557,12 @@
 
     <!-- ================= 5. ENTERPRISE SPA ENGINE ================= -->
     <script>
+        // GLOBAL SECURITY TOKEN HELPER
+        const getCsrfToken = () => {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : '';
+        };
+
         lucide.createIcons();
 
         const app = {
@@ -980,7 +986,7 @@
                 },
                 
                 // ===============================================
-                // RAW FETCH - MATCHING NATER-PAY ARCHITECTURE
+                // RAW FETCH - FIXED CSRF ERROR
                 // ===============================================
                 async uploadAvatar(e) {
                     const file = e.target.files[0];
@@ -998,7 +1004,6 @@
 
                         const token = getCsrfToken();
                         
-                        // Use raw fetch to prevent httpClient from overriding boundaries
                         const res = await fetch('/api/profile/avatar', {
                             method: 'POST',
                             headers: { 'X-CSRF-Token': token },
@@ -1021,7 +1026,7 @@
                 },
 
                 // ===============================================
-                // RAW FETCH - MATCHING NATER-PAY ARCHITECTURE
+                // RAW FETCH - FIXED CANCEL BY USER BUG
                 // ===============================================
                 async submitContentUpload(e) {
                     e.preventDefault();
@@ -1038,28 +1043,16 @@
                     if (!coverImage || !videoFile) return app.toast.fire({ icon: 'error', title: 'Both Image and Video files are required' });
                     if (access === 'Premium' && (!coinCost || coinCost < 1)) return app.toast.fire({ icon: 'error', title: 'Set a valid coin price' });
 
-                    // Hide the form modal
                     app.ui.closeUploadModal();
 
-                    // Create an Abort Controller to allow cancelling!
-                    const controller = new AbortController();
-
                     Swal.fire({
-                        title: 'Deploying to Network...',
-                        html: '<p class="mb-4 text-sm text-gray-300">Authenticating and uploading securely. Please wait.</p><b class="text-accent text-sm bg-gray-800 p-3 rounded-lg block">Large video files can take several minutes to upload depending on your network speed.</b>',
+                        title: 'Deploying to Vault...',
+                        html: '<p class="text-sm text-gray-300 mb-2">Authenticating and uploading securely.</p><b class="text-accent text-xs bg-gray-800 p-2 rounded block">Large videos take time. Please do not close the app.</b>',
                         allowOutsideClick: false,
                         allowEscapeKey: false,
                         showConfirmButton: false,
-                        showCancelButton: true,
-                        cancelButtonText: 'Cancel Upload',
-                        cancelButtonColor: '#E74C3C',
                         background: '#1B1B1B', color: '#F5F5F5',
                         didOpen: () => { Swal.showLoading(); }
-                    }).then((result) => {
-                        if (result.isDismissed) {
-                            controller.abort();
-                            app.toast.fire({ icon: 'info', title: 'Upload Cancelled by User' });
-                        }
                     });
 
                     try {
@@ -1074,12 +1067,10 @@
                         
                         const token = getCsrfToken();
 
-                        // Use raw fetch to prevent httpClient from overriding boundaries
                         const res = await fetch('/api/studio/upload', {
                             method: 'POST',
                             headers: { 'X-CSRF-Token': token },
-                            body: formData,
-                            signal: controller.signal
+                            body: formData
                         });
 
                         const data = await res.json();
@@ -1097,8 +1088,6 @@
                         document.getElementById('upload-video-label').innerText = 'Select Video File';
                         this.fetchStudioStats();
                     } catch (err) {
-                        if (err.name === 'AbortError') return; 
-                        
                         Swal.fire({
                             icon: 'error', title: 'Upload Failed',
                             text: err.message || 'The server rejected the file or your network disconnected.',
