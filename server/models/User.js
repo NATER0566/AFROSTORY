@@ -32,12 +32,26 @@ const userSchema = new mongoose.Schema({
     enum: ['USER', 'CREATOR', 'ADMIN', 'OWNER'], 
     default: 'USER' 
   },
-  // --- NEW: Regional Monetization Engine ---
+  
+  // --- Profile & Studio Branding ---
+  avatarUrl: {
+    type: String // Stores the Cloudinary image URL for their profile picture
+  },
+  brandName: {
+    type: String // E.g., "NATER GRACE CODE"
+  },
+  followers: {
+    type: Number,
+    default: 0
+  },
+
+  // --- Regional Monetization Engine ---
   country: {
     type: String,
     default: 'UNKNOWN' // Will be auto-populated by IP (e.g., 'NG')
   },
-  // --- NEW: OTP Verification Engine ---
+  
+  // --- OTP Verification Engine ---
   isVerified: {
     type: Boolean,
     default: false
@@ -50,7 +64,8 @@ const userSchema = new mongoose.Schema({
     type: Date,
     select: false // Hidden from normal queries
   },
-  // ----------------------------------------
+  
+  // --- System ---
   adUnlocksRemaining: { 
     type: Number, 
     default: 3, 
