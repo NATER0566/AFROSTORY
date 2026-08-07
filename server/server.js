@@ -5,6 +5,7 @@ import fastifyCors from '@fastify/cors';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyCookie from '@fastify/cookie';
 import fastifyStatic from '@fastify/static';
+import fastifyMultipart from '@fastify/multipart'; // <-- ADDED: Required for Video/Image uploads
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -30,7 +31,7 @@ const fastify = Fastify({
 // 1. REGISTER ENTERPRISE MIDDLEWARE
 // ==========================================
 
-// Security headers (Helmet) - Modified to allow frontend CSS and JS
+// Security headers (Helmet)
 fastify.register(fastifyHelmet, {
   contentSecurityPolicy: false
 });
@@ -46,6 +47,13 @@ fastify.register(fastifyCors, {
 fastify.register(fastifyCookie, {
   secret: process.env.JWT_SECRET,
   parseOptions: {}
+});
+
+// Multipart for Studio Video/Image Uploads <-- ADDED
+fastify.register(fastifyMultipart, {
+  limits: {
+    fileSize: 500 * 1024 * 1024 // 500MB max file size for videos
+  }
 });
 
 // Static File Serving
@@ -72,7 +80,6 @@ const connectDB = async () => {
 // ==========================================
 // 3. REALTIME ENGINE (Socket.io)
 // ==========================================
-
 const io = new Server(fastify.server, {
   cors: {
     origin: process.env.FRONTEND_URL || '*',
@@ -80,12 +87,10 @@ const io = new Server(fastify.server, {
   }
 });
 
-// Expose io instance to Fastify BEFORE the server starts
 fastify.decorate('io', io);
 
 io.on('connection', (socket) => {
   fastify.log.info(`🔌 Client Connected: ${socket.id}`);
-
   socket.on('disconnect', () => {
     fastify.log.info(`🔌 Client Disconnected: ${socket.id}`);
   });
@@ -122,19 +127,21 @@ fastify.register(episodeRoutes, { prefix: '/api/episodes' });
 import commentRoutes from './routes/comments.js';
 fastify.register(commentRoutes, { prefix: '/api/comments' });
 
+// <-- ADDED MISSING ROUTES FOR FRONTEND -->
+import profileRoutes from './routes/profile.js';
+fastify.register(profileRoutes, { prefix: '/api/profile' });
+
+import studioRoutes from './routes/studio.js';
+fastify.register(studioRoutes, { prefix: '/api/studio' });
+
 // ==========================================
 // 5. BOOTSTRAP SERVER
 // ==========================================
 const startServer = async () => {
   try {
     await connectDB();
-
     const port = process.env.PORT || 3000;
-    await fastify.listen({
-      port: port,
-      host: '0.0.0.0'
-    });
-
+    await fastify.listen({ port: port, host: '0.0.0.0' });
     fastify.log.info(`🚀 AfroStory Engine running at http://localhost:${port}`);
   } catch (err) {
     fastify.log.error(err);
