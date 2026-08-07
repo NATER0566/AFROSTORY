@@ -14,7 +14,6 @@ export default async function walletRoutes(fastify, options) {
   // 1. PAYSTACK WEBHOOK (Server-to-Server)
   // ==========================================
   fastify.post('/webhook/paystack', async (req, reply) => {
-    // 1. Cryptographically verify the request actually came from Paystack
     const secret = process.env.PAYSTACK_SECRET_KEY;
     const hash = crypto.createHmac('sha512', secret)
                        .update(JSON.stringify(req.body))
@@ -27,24 +26,20 @@ export default async function walletRoutes(fastify, options) {
 
     const event = req.body;
 
-    // We only care about successful charges
     if (event.event === 'charge.success') {
       const { reference, amount, metadata } = event.data;
       const userId = metadata?.userId; 
 
       if (!userId) {
         req.log.error('Webhook received without userId in metadata.');
-        return reply.code(200).send(); // Acknowledge so Paystack stops retrying
+        return reply.code(200).send();
       }
 
-      // IDEMPOTENCY CHECK: Ensure this exact transaction hasn't been processed yet
+      // IDEMPOTENCY CHECK
       const existingTx = await Transaction.findOne({ reference });
-      if (existingTx) {
-        return reply.code(200).send(); // Already processed, safely ignore
-      }
+      if (existingTx) return reply.code(200).send();
 
-      // Convert Kobo/Naira to Story Coins (Example: 100 Naira = 10 Coins)
-      // Adjust this conversion rate strictly to your business model
+      // Convert Kobo to Naira, then Naira to Coins (10 Naira = 1 Coin)
       const coinAmount = (amount / 100) / 10; 
 
       const session = await mongoose.startSession();
@@ -54,14 +49,12 @@ export default async function walletRoutes(fastify, options) {
         const wallet = await Wallet.findOne({ userId }).session(session);
         if (!wallet) throw new Error('Wallet not found');
 
-        // Safely increment wallet balance using MongoDB's $inc
         await Wallet.updateOne(
           { userId },
           { $inc: { storyCoins: coinAmount } },
           { session }
         );
 
-        // Log the unalterable audit trail
         await Transaction.create([{
           walletId: wallet._id,
           type: 'FUND',
@@ -81,7 +74,6 @@ export default async function walletRoutes(fastify, options) {
       }
     }
 
-    // Always return 200 OK to Paystack within 3 seconds, or they will disable your webhook
     return reply.code(200).send({ success: true });
   });
 
@@ -95,19 +87,13 @@ export default async function walletRoutes(fastify, options) {
 
     if (!episodeId) return reply.code(400).send({ success: false, message: 'Episode ID required' });
 
-    // Ensure the episode exists and fetch its parent series to get the Creator ID
     const episode = await Episode.findById(episodeId).populate('seriesId');
     if (!episode) return reply.code(404).send({ success: false, message: 'Episode not found' });
 
-    if (episode.isFree) {
-      return reply.code(200).send({ success: true, message: 'Episode is already free' });
-    }
+    if (episode.isFree) return reply.code(200).send({ success: true, message: 'Episode is already free' });
 
-    // Ensure the user hasn't already unlocked it (Prevents double spending)
     const existingUnlock = await Unlock.findOne({ userId, episodeId });
-    if (existingUnlock) {
-      return reply.code(200).send({ success: true, message: 'Episode already unlocked' });
-    }
+    if (existingUnlock) return reply.code(200).send({ success: true, message: 'Episode already unlocked' });
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -116,13 +102,18 @@ export default async function walletRoutes(fastify, options) {
       const userWallet = await Wallet.findOne({ userId }).session(session);
       const coinCost = episode.coinCost;
 
-      // Verify sufficient funds securely on the backend
       if (parseFloat(userWallet.storyCoins.toString()) < coinCost) {
         throw new Error('INSUFFICIENT_FUNDS');
       }
 
       const creatorId = episode.seriesId.creatorId;
-      const creatorEarnings = (coinCost * 0.60).toFixed(2); // 60% Revenue Split
+      
+      // REGIONAL PROFIT ENGINE: Check Creator's Country
+      const creatorUser = await User.findById(creatorId).session(session);
+      const splitRate = (creatorUser.country === 'NG') ? 0.60 : 0.55;
+      
+      const creatorEarnings = parseFloat((coinCost * splitRate).toFixed(2)); 
+      // The remaining percentage automatically stays in the platform via pure math.
 
       // 1. Deduct from User
       await Wallet.updateOne(
@@ -131,10 +122,10 @@ export default async function walletRoutes(fastify, options) {
         { session }
       );
 
-      // 2. Add locked earnings to Creator
+      // 2. Add strictly calculated earnings to Creator
       await Wallet.updateOne(
         { userId: creatorId },
-        { $inc: { lockedEarnings: parseFloat(creatorEarnings) } },
+        { $inc: { lockedEarnings: creatorEarnings } },
         { session }
       );
 
@@ -146,14 +137,14 @@ export default async function walletRoutes(fastify, options) {
         amountPaid: coinCost
       }], { session });
 
-      // 4. Update Episode Analytics
+      // 4. Update Analytics
       await Episode.updateOne(
         { _id: episodeId },
         { $inc: { totalUnlocks: 1 } },
         { session }
       );
 
-      // 5. Audit Trail for User
+      // 5. Audit Trail
       await Transaction.create([{
         walletId: userWallet._id,
         type: 'SPEND',
@@ -163,7 +154,6 @@ export default async function walletRoutes(fastify, options) {
       }], { session });
 
       await session.commitTransaction();
-
       return reply.code(200).send({ success: true, message: 'Episode unlocked successfully' });
 
     } catch (error) {
@@ -171,7 +161,6 @@ export default async function walletRoutes(fastify, options) {
       if (error.message === 'INSUFFICIENT_FUNDS') {
         return reply.code(402).send({ success: false, message: 'Insufficient coins. Please top up.' });
       }
-      req.log.error(`Unlock Error: ${error.message}`);
       return reply.code(500).send({ success: false, message: 'Unlock failed. Please try again.' });
     } finally {
       session.endSession();
@@ -192,9 +181,7 @@ export default async function walletRoutes(fastify, options) {
     }
 
     const existingUnlock = await Unlock.findOne({ userId, episodeId });
-    if (existingUnlock) {
-      return reply.code(200).send({ success: true, message: 'Episode already unlocked' });
-    }
+    if (existingUnlock) return reply.code(200).send({ success: true, message: 'Episode already unlocked' });
 
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -202,15 +189,11 @@ export default async function walletRoutes(fastify, options) {
     try {
       const user = await User.findById(userId).session(session);
       
-      if (user.adUnlocksRemaining <= 0) {
-        throw new Error('NO_ADS_REMAINING');
-      }
+      if (user.adUnlocksRemaining <= 0) throw new Error('NO_ADS_REMAINING');
 
-      // Deduct ad unlock token
       user.adUnlocksRemaining -= 1;
       await user.save({ session });
 
-      // Grant Access
       await Unlock.create([{
         userId,
         episodeId,
@@ -218,7 +201,6 @@ export default async function walletRoutes(fastify, options) {
         amountPaid: 0
       }], { session });
 
-      // Update Analytics
       await Episode.updateOne(
         { _id: episodeId },
         { $inc: { totalAdUnlocks: 1 } },
@@ -234,6 +216,79 @@ export default async function walletRoutes(fastify, options) {
         return reply.code(429).send({ success: false, message: 'Daily ad limit reached. Come back tomorrow or use coins.' });
       }
       return reply.code(500).send({ success: false, message: 'System error during unlock.' });
+    } finally {
+      session.endSession();
+    }
+  });
+
+  // ==========================================
+  // 4. GIFT CREATOR (TikTok Style)
+  // ==========================================
+  fastify.post('/gift', { preHandler: [requireAuth] }, async (req, reply) => {
+    const { seriesId, amount } = req.body;
+    const userId = req.user.userId;
+    const giftAmount = parseFloat(amount);
+
+    if (!seriesId || !giftAmount || giftAmount <= 0) {
+        return reply.code(400).send({ success: false, message: 'Valid series ID and amount required.' });
+    }
+
+    const series = await Series.findById(seriesId);
+    if (!series) return reply.code(404).send({ success: false, message: 'Series not found.' });
+
+    // Cannot gift yourself
+    if (series.creatorId.toString() === userId.toString()) {
+        return reply.code(400).send({ success: false, message: 'You cannot gift yourself.' });
+    }
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const userWallet = await Wallet.findOne({ userId }).session(session);
+      
+      if (parseFloat(userWallet.storyCoins.toString()) < giftAmount) {
+        throw new Error('INSUFFICIENT_FUNDS');
+      }
+
+      // REGIONAL PROFIT ENGINE: Check Creator's Country
+      const creatorUser = await User.findById(series.creatorId).session(session);
+      const splitRate = (creatorUser.country === 'NG') ? 0.60 : 0.55;
+      
+      const creatorEarnings = parseFloat((giftAmount * splitRate).toFixed(2));
+
+      // 1. Deduct from Sender
+      await Wallet.updateOne(
+        { userId },
+        { $inc: { storyCoins: -giftAmount } },
+        { session }
+      );
+
+      // 2. Add calculated split to Creator
+      await Wallet.updateOne(
+        { userId: series.creatorId },
+        { $inc: { lockedEarnings: creatorEarnings } },
+        { session }
+      );
+
+      // 3. Log the Gifting Transaction
+      await Transaction.create([{
+        walletId: userWallet._id,
+        type: 'SPEND',
+        amount: -giftAmount,
+        description: `Gifted coins to creator of: ${series.title}`,
+        status: 'SUCCESS'
+      }], { session });
+
+      await session.commitTransaction();
+      return reply.code(200).send({ success: true, message: 'Gift sent successfully!' });
+
+    } catch (error) {
+      await session.abortTransaction();
+      if (error.message === 'INSUFFICIENT_FUNDS') {
+        return reply.code(402).send({ success: false, message: 'Insufficient coins to send this gift.' });
+      }
+      return reply.code(500).send({ success: false, message: 'Failed to send gift. Try again later.' });
     } finally {
       session.endSession();
     }
