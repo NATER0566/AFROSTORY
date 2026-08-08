@@ -246,70 +246,6 @@
                 </div>
             </section>
 
-            <!-- ================= VIEW: PLAYER / SERIES / COMMENTS ================= -->
-            <section id="view-player" class="spa-section">
-                <div class="w-full bg-black aspect-video relative group" id="video-container">
-                    <video id="hls-player" class="w-full h-full" controls crossorigin playsinline></video>
-                    <div id="video-overlay" class="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
-                        <i data-lucide="play-circle" class="w-20 h-20 text-gray-700"></i>
-                    </div>
-                    <button onclick="app.player.close()" class="absolute top-4 left-4 z-20 text-white bg-black/50 p-2 rounded-full hover:text-accent focus-ring shadow-lg" aria-label="Close Player">
-                        <i data-lucide="arrow-left"></i>
-                    </button>
-                </div>
-
-                <div class="p-4 md:p-8 max-w-6xl mx-auto">
-                    <div id="player-meta-error" class="d-none text-center py-10"></div>
-                    <div id="player-meta-content">
-                        <div class="flex flex-col sm:flex-row justify-between items-start mb-6">
-                            <div class="mb-4 sm:mb-0">
-                                <h1 class="text-3xl font-bold mb-2" id="series-title">Loading...</h1>
-                                <div class="flex items-center space-x-3 text-sm text-gray-400" id="series-meta">
-                                    <span class="text-success font-bold" id="series-meta-match">--% Match</span>
-                                    <span id="series-meta-year">----</span>
-                                    <span class="border border-gray-600 px-1 text-[10px]">18+</span>
-                                    <span id="series-meta-episodes">0 Episodes</span>
-                                    <span class="bg-gray-800 px-2 py-0.5 rounded text-white">HD</span>
-                                </div>
-                            </div>
-                            <div class="flex space-x-3">
-                                <button id="btn-gift" class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring transition-colors text-accent shadow-[0_0_15px_rgba(212,160,23,0.3)]" onclick="app.api.giftCreator(app.state.content.currentSeriesId, this)" aria-label="Gift Creator" title="Gift Creator Coins"><i data-lucide="gift"></i></button>
-                                <button id="btn-like" class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring transition-colors" onclick="app.api.likeSeries(app.state.content.currentSeriesId, this)" aria-label="Like"><i data-lucide="thumbs-up"></i></button>
-                                <button id="btn-fav" class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring transition-colors" onclick="app.api.toggleFavorite(app.state.content.currentSeriesId, this)" aria-label="Toggle Favorite"><i data-lucide="plus"></i></button>
-                                <button class="w-10 h-10 rounded-full bg-surface border border-gray-700 flex items-center justify-center hover:bg-gray-800 focus-ring" onclick="app.api.shareSeries(app.state.content.currentSeriesId)" aria-label="Share"><i data-lucide="share-2"></i></button>
-                            </div>
-                        </div>
-                        
-                        <p class="text-gray-300 mb-6 leading-relaxed max-w-3xl" id="series-desc">...</p>
-                        
-                        <div class="mt-10 border-t border-gray-800 pt-6">
-                            <div class="flex justify-between items-center mb-6">
-                                <h3 class="text-xl font-bold">Episodes</h3>
-                                <select id="season-selector" class="bg-surface border border-gray-700 text-white rounded-lg px-4 py-2 outline-none focus-ring" onchange="app.player.loadSeason(this.value)">
-                                    <option value="1">Season 1</option>
-                                </select>
-                            </div>
-                            <div class="space-y-4" id="episodes-list">
-                                <div class="skeleton h-24 w-full rounded-xl"></div>
-                            </div>
-                        </div>
-
-                        <!-- Comments Section -->
-                        <div class="mt-10 border-t border-gray-800 pt-6">
-                            <h3 class="text-xl font-bold mb-6">Comments (<span id="comments-count">0</span>)</h3>
-                            <form onsubmit="app.api.submitComment(event)" class="flex space-x-3 mb-8">
-                                <div class="w-10 h-10 rounded-full bg-gray-800 shrink-0 border border-gray-700 flex items-center justify-center font-bold text-accent" id="comment-user-avatar">?</div>
-                                <input type="text" id="comment-input" required class="flex-1 bg-background border border-gray-700 rounded-lg px-4 py-2 text-white focus-ring" placeholder="Add a comment...">
-                                <button type="submit" id="btn-submit-comment" class="bg-accent text-background px-4 rounded-lg font-bold hover:bg-yellow-600 transition-colors focus-ring shrink-0">Post</button>
-                            </form>
-                            <div id="comments-list" class="space-y-4">
-                                <div class="skeleton h-16 w-full rounded-xl"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             <!-- ================= VIEW: WALLET ================= -->
             <section id="view-wallet" class="spa-section p-4 md:p-8">
                 <div class="max-w-4xl mx-auto">
@@ -474,6 +410,94 @@
         </div>
     </main>
 
+    <!-- ================= VIEW: IMMERSIVE PLAYER (TIKTOK / DRAMABOX STYLE) ================= -->
+    <section id="view-player" class="spa-section fixed inset-0 z-[100] bg-black overflow-hidden">
+        
+        <video id="hls-player" class="absolute inset-0 w-full h-full object-cover cursor-pointer" playsinline loop></video>
+        
+        <div class="absolute inset-0 z-10 flex flex-col justify-between pointer-events-none">
+            <!-- Top Bar -->
+            <div class="p-4 pt-6 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent pointer-events-auto">
+                <button onclick="app.player.close()" class="w-10 h-10 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/10 focus-ring shadow-lg hover:bg-white/20 transition-colors"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+                <div class="font-bold text-sm text-white/90 bg-black/40 px-3 py-1 rounded-full backdrop-blur border border-white/10" id="series-meta-episodes">0 Episodes</div>
+                <div class="w-10 h-10"></div>
+            </div>
+
+            <div id="player-meta-error" class="d-none text-center py-10 w-full absolute top-1/2 -translate-y-1/2 pointer-events-auto"></div>
+
+            <!-- Bottom & Side UI -->
+            <div class="flex items-end pb-8 px-4 bg-gradient-to-t from-black/90 via-black/40 to-transparent h-2/3 pointer-events-auto">
+                <!-- Info (Left) -->
+                <div class="flex-1 pr-4">
+                    <div class="flex items-center space-x-2 mb-2">
+                        <span class="bg-accent text-black text-[10px] font-black px-2 py-0.5 rounded shadow-lg" id="series-meta-match">NEW</span>
+                        <span class="bg-white/20 backdrop-blur text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10" id="series-meta-year">2026</span>
+                    </div>
+                    <h1 class="text-2xl font-black text-white mb-1 shadow-sm drop-shadow-md" id="series-title">Loading...</h1>
+                    <p class="text-sm text-gray-300 line-clamp-2 mb-4 drop-shadow-md" id="series-desc">...</p>
+                    
+                    <button onclick="app.ui.toggleSheet('episodes-sheet')" class="bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 text-white px-4 py-2.5 rounded-xl text-sm font-bold flex items-center transition-colors focus-ring shadow-lg">
+                        <i data-lucide="list-video" class="w-4 h-4 mr-2 text-accent"></i> Browse Episodes
+                    </button>
+                </div>
+
+                <!-- Action Buttons (Right) -->
+                <div class="flex flex-col items-center space-y-5 pb-2">
+                    <div class="w-12 h-12 rounded-full border-2 border-accent overflow-hidden mb-2 bg-gray-800 shadow-[0_0_15px_rgba(212,160,23,0.4)]">
+                        <img id="player-creator-avatar" src="https://ui-avatars.com/api/?name=C&background=111&color=D4A017" class="w-full h-full object-cover">
+                    </div>
+
+                    <button class="flex flex-col items-center group focus-ring outline-none" onclick="app.api.likeSeries(app.state.content.currentSeriesId, this)">
+                        <div class="w-10 h-10 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/10 group-hover:text-action transition-colors"><i data-lucide="heart" class="w-5 h-5 fill-current"></i></div>
+                        <span class="text-[10px] font-bold text-white mt-1 drop-shadow-md">Like</span>
+                    </button>
+
+                    <button class="flex flex-col items-center group focus-ring outline-none" onclick="app.ui.toggleSheet('comments-sheet')">
+                        <div class="w-10 h-10 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/10"><i data-lucide="message-circle" class="w-5 h-5"></i></div>
+                        <span class="text-[10px] font-bold text-white mt-1 drop-shadow-md" id="comments-count-ui">0</span>
+                    </button>
+
+                    <button class="flex flex-col items-center group focus-ring outline-none" onclick="app.api.toggleFavorite(app.state.content.currentSeriesId, this)">
+                        <div class="w-10 h-10 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/10"><i data-lucide="plus" class="w-5 h-5"></i></div>
+                        <span class="text-[10px] font-bold text-white mt-1 drop-shadow-md">Save</span>
+                    </button>
+
+                    <button class="flex flex-col items-center group focus-ring outline-none" onclick="app.api.giftCreator(app.state.content.currentSeriesId, this)">
+                        <div class="w-10 h-10 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-accent border border-accent/30 shadow-[0_0_15px_rgba(212,160,23,0.3)]"><i data-lucide="gift" class="w-5 h-5"></i></div>
+                        <span class="text-[10px] font-bold text-white mt-1 drop-shadow-md">Gift</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Episodes Bottom Sheet -->
+        <div id="episodes-sheet" class="fixed inset-x-0 bottom-0 bg-surface rounded-t-3xl z-[110] h-[75vh] transform translate-y-full transition-transform duration-300 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.8)] border-t border-gray-800">
+            <div class="p-5 flex justify-between items-center border-b border-gray-800 shrink-0">
+                <div>
+                    <h3 class="font-bold text-xl text-white">Episodes</h3>
+                    <select id="season-selector" class="bg-transparent text-accent text-sm outline-none font-bold mt-1" onchange="app.player.loadSeason(this.value)"></select>
+                </div>
+                <button onclick="app.ui.toggleSheet('episodes-sheet')" class="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white focus-ring"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-3 hide-scrollbar" id="episodes-list"></div>
+        </div>
+
+        <!-- Comments Bottom Sheet -->
+        <div id="comments-sheet" class="fixed inset-x-0 bottom-0 bg-surface rounded-t-3xl z-[110] h-[75vh] transform translate-y-full transition-transform duration-300 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.8)] border-t border-gray-800">
+            <div class="p-5 flex justify-between items-center border-b border-gray-800 shrink-0">
+                <h3 class="font-bold text-xl text-white">Comments (<span id="comments-count">0</span>)</h3>
+                <button onclick="app.ui.toggleSheet('comments-sheet')" class="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center text-gray-400 hover:text-white focus-ring"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar" id="comments-list"></div>
+            <div class="p-4 border-t border-gray-800 shrink-0 bg-surface">
+                <form onsubmit="app.api.submitComment(event)" class="flex space-x-3">
+                    <input type="text" id="comment-input" required class="flex-1 bg-background border border-gray-700 rounded-full px-4 py-2.5 text-white text-sm focus-ring" placeholder="Add a comment...">
+                    <button type="submit" id="btn-submit-comment" class="bg-accent text-black px-4 rounded-full font-bold hover:bg-yellow-600 transition-colors focus-ring shrink-0"><i data-lucide="send" class="w-4 h-4"></i></button>
+                </form>
+            </div>
+        </div>
+    </section>
+
     <!-- ================= 3. BOTTOM NAV (MOBILE) ================= -->
     <nav class="lg:hidden fixed bottom-0 w-full bg-surface/95 backdrop-blur-md border-t border-gray-800 flex justify-around py-2 pb-4 z-40" aria-label="Mobile Navigation">
         <button onclick="app.nav.go('discover')" class="mobile-nav-btn text-accent flex flex-col items-center p-2 focus-ring rounded-lg" data-target="discover"><i data-lucide="compass" class="w-6 h-6 mb-1"></i><span class="text-[10px] font-semibold">Home</span></button>
@@ -620,7 +644,13 @@
                         }
                     });
 
-                    document.getElementById('main-scroll-area').scrollTop = 0;
+                    // Manage body scrolling lock when player is open
+                    if (viewId === 'player') {
+                        document.body.classList.add('overflow-hidden');
+                    } else {
+                        document.body.classList.remove('overflow-hidden');
+                        document.getElementById('main-scroll-area').scrollTop = 0;
+                    }
 
                     if (pushHistory) {
                         let query = `?view=${viewId}`;
@@ -905,6 +935,7 @@
                     try {
                         const comments = await app.httpClient.request(`/comments/${seriesId}`).catch(() => []);
                         document.getElementById('comments-count').innerText = comments.length;
+                        document.getElementById('comments-count-ui').innerText = comments.length;
                         
                         let html = '';
                         if(comments.length === 0) {
@@ -914,7 +945,7 @@
                                 html += `
                                     <div class="flex space-x-3">
                                         <div class="w-10 h-10 rounded-full bg-gray-800 shrink-0 border border-gray-700 flex items-center justify-center font-bold text-gray-400">${app.ui.escapeHTML(c.username.charAt(0).toUpperCase())}</div>
-                                        <div class="flex-1 bg-surface p-3 rounded-lg border border-gray-800">
+                                        <div class="flex-1 bg-background p-3 rounded-xl border border-gray-800">
                                             <div class="flex justify-between items-center mb-1">
                                                 <span class="font-bold text-sm text-white">${app.ui.escapeHTML(c.username)}</span>
                                                 <span class="text-[10px] text-gray-500">${new Date(c.createdAt).toLocaleDateString()}</span>
@@ -940,7 +971,7 @@
                     const btn = document.getElementById('btn-submit-comment');
                     const ogHtml = btn.innerHTML;
                     btn.disabled = true;
-                    btn.innerHTML = `<span class="animate-pulse">...</span>`;
+                    btn.innerHTML = `<span class="animate-spin text-accent w-4 h-4 rounded-full border-2 border-accent border-t-transparent inline-block"></span>`;
                     
                     try {
                         await app.httpClient.request(`/comments/${app.state.content.currentSeriesId}`, {
@@ -986,7 +1017,7 @@
                 },
                 
                 // ===============================================
-                // RAW FETCH - FIXED CSRF ERROR
+                // RAW FETCH - FIXED CREDENTIALS BUG
                 // ===============================================
                 async uploadAvatar(e) {
                     const file = e.target.files[0];
@@ -1001,13 +1032,12 @@
                     try {
                         const formData = new FormData();
                         formData.append('avatar', file);
-
-                        // Provide dummy token to prevent crashing, Fastify ignores it anyway
                         const token = getCsrfToken() || 'dummy';
                         
                         const res = await fetch('/api/profile/avatar', {
                             method: 'POST',
                             headers: { 'X-CSRF-Token': token },
+                            credentials: 'include', // <--- THE CRITICAL FIX FOR 403 ERRORS
                             body: formData
                         });
 
@@ -1027,7 +1057,7 @@
                 },
 
                 // ===============================================
-                // RAW FETCH - FIXED CANCEL BY USER BUG
+                // RAW FETCH - FIXED CREDENTIALS BUG
                 // ===============================================
                 async submitContentUpload(e) {
                     e.preventDefault();
@@ -1046,14 +1076,24 @@
 
                     app.ui.closeUploadModal();
 
+                    const controller = new AbortController();
+
                     Swal.fire({
                         title: 'Deploying to Vault...',
                         html: '<p class="text-sm text-gray-300 mb-2">Authenticating and uploading securely.</p><b class="text-accent text-xs bg-gray-800 p-2 rounded block">Large videos take time. Please do not close the app.</b>',
                         allowOutsideClick: false,
                         allowEscapeKey: false,
                         showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: 'Cancel Upload',
+                        cancelButtonColor: '#E74C3C',
                         background: '#1B1B1B', color: '#F5F5F5',
                         didOpen: () => { Swal.showLoading(); }
+                    }).then((result) => {
+                        if (result.isDismissed) {
+                            controller.abort();
+                            app.toast.fire({ icon: 'info', title: 'Upload Cancelled by User' });
+                        }
                     });
 
                     try {
@@ -1066,13 +1106,14 @@
                         formData.append('coverImage', coverImage);
                         formData.append('videoFile', videoFile);
                         
-                        // Provide dummy token to prevent crashing
                         const token = getCsrfToken() || 'dummy';
 
                         const res = await fetch('/api/studio/upload', {
                             method: 'POST',
                             headers: { 'X-CSRF-Token': token },
-                            body: formData
+                            credentials: 'include', // <--- THE CRITICAL FIX FOR 403 ERRORS
+                            body: formData,
+                            signal: controller.signal
                         });
 
                         const data = await res.json();
@@ -1090,6 +1131,8 @@
                         document.getElementById('upload-video-label').innerText = 'Select Video File';
                         this.fetchStudioStats();
                     } catch (err) {
+                        if (err.name === 'AbortError') return; 
+                        
                         Swal.fire({
                             icon: 'error', title: 'Upload Failed',
                             text: err.message || 'The server rejected the file or your network disconnected.',
@@ -1183,22 +1226,20 @@
 
                 async toggleFavorite(seriesId, btn) {
                     btn.disabled = true;
-                    btn.innerHTML = '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>';
                     try {
                         await app.httpClient.request('/favorites/toggle', { method: 'POST', body: JSON.stringify({ seriesId }) });
                         app.toast.fire({ icon: 'success', title: 'Library Updated' });
                         this.fetchListsData();
                     } catch(err) { app.toast.fire({ icon: 'error', title: err.message }); }
-                    finally { btn.disabled = false; btn.innerHTML = '<i data-lucide="plus"></i>'; lucide.createIcons(); }
+                    finally { btn.disabled = false; }
                 },
                 async likeSeries(seriesId, btn) {
                     btn.disabled = true;
-                    btn.innerHTML = '<div class="w-4 h-4 border-2 border-t-transparent border-gray-400 rounded-full animate-spin"></div>';
                     try {
                         await app.httpClient.request('/series/like', { method: 'POST', body: JSON.stringify({ seriesId }) });
                         app.toast.fire({ icon: 'success', title: 'Liked!' });
                     } catch(err) { app.toast.fire({ icon: 'error', title: err.message }); }
-                    finally { btn.disabled = false; btn.innerHTML = '<i data-lucide="thumbs-up"></i>'; lucide.createIcons(); }
+                    finally { btn.disabled = false; }
                 },
                 async shareSeries(seriesId) {
                     try {
@@ -1226,7 +1267,7 @@
                 }
             },
 
-            // --- VIDEO PLAYER ENIGNE ---
+            // --- TIKTOK / REELSHORT IMMERSIVE PLAYER ENGINE ---
             player: {
                 hls: null,
                 videoElem: null,
@@ -1236,6 +1277,13 @@
 
                 init() {
                     this.videoElem = document.getElementById('hls-player');
+                    
+                    // Tap to pause/play feature
+                    this.videoElem.addEventListener('click', () => {
+                        if(this.videoElem.paused) this.videoElem.play();
+                        else this.videoElem.pause();
+                    });
+
                     this.videoElem.addEventListener('timeupdate', () => {
                         if (!this.currentEpisodeId || this.videoElem.paused) return;
                         const currentTime = this.videoElem.currentTime;
@@ -1261,19 +1309,15 @@
                     app.nav.go('player', pushHistory);
                     
                     const errContainer = document.getElementById('player-meta-error');
-                    const contentContainer = document.getElementById('player-meta-content');
-                    
-                    contentContainer.classList.add('d-none');
                     errContainer.classList.remove('d-none');
-                    errContainer.innerHTML = `<div class="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto"></div>`;
+                    errContainer.innerHTML = `<div class="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto shadow-[0_0_20px_rgba(212,160,23,0.5)]"></div>`;
 
                     try {
                         const data = await app.httpClient.request(`/series/${seriesId}`);
                         errContainer.classList.add('d-none');
-                        contentContainer.classList.remove('d-none');
 
                         document.getElementById('series-title').innerText = app.ui.escapeHTML(data.title);
-                        document.getElementById('series-meta-match').innerText = `${app.ui.escapeHTML((data.rating || 90).toString())}% Match`;
+                        document.getElementById('series-meta-match').innerText = `🔥 ${app.ui.escapeHTML((data.rating || 90).toString())}% Match`;
                         document.getElementById('series-meta-year').innerText = app.ui.escapeHTML((data.releaseYear || new Date().getFullYear()).toString());
                         document.getElementById('series-meta-episodes').innerText = `${app.ui.escapeHTML((data.totalEpisodes || 0).toString())} Episodes`;
                         document.getElementById('series-desc').innerText = app.ui.escapeHTML(data.description || '');
@@ -1283,7 +1327,7 @@
                             seasonSelect.innerHTML = data.seasons.map((s, i) => `<option value="${s.id || i+1}">${app.ui.escapeHTML(s.name || 'Season ' + (i+1))}</option>`).join('');
                             this.loadSeason(data.seasons[0].id || 1);
                         } else {
-                            seasonSelect.innerHTML = `<option value="1">Season 1</option>`;
+                            seasonSelect.innerHTML = `<option value="1" class="bg-surface text-white">Season 1</option>`;
                             this.loadSeason(1);
                         }
 
@@ -1311,41 +1355,58 @@
                             const accessType = ep.coinCost > 0 ? 'Premium' : 'Ad'; 
                             
                             const action = isLocked ? `app.paywall.showModal('${ep._id}', ${ep.coinCost}, '${accessType}')` : `app.player.play('${ep._id}', '${ep.mediaUrl}', ${ep.lastPosition || 0})`;
+                            
+                            // Ghost Data Fix: Replace empty thumbnails gracefully
+                            const thumb = ep.thumbnail || 'https://images.unsplash.com/photo-1604028297235-db715019a844?w=200&q=80';
+
                             const lockUI = isLocked ? `
-                                <div class="w-32 h-20 bg-gray-700 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-                                    <i data-lucide="lock" class="w-6 h-6 text-accent"></i>
+                                <div class="w-32 h-20 bg-gray-800 rounded-lg flex items-center justify-center shrink-0 relative overflow-hidden">
+                                    <img src="${thumb}" class="w-full h-full object-cover opacity-30" onerror="this.style.display='none'">
+                                    <i data-lucide="lock" class="w-6 h-6 text-accent absolute z-10 shadow-lg"></i>
                                 </div>
                             ` : `
-                                <div class="w-32 h-20 bg-gray-700 rounded-lg overflow-hidden relative shrink-0">
-                                    <img src="${ep.thumbnail || ''}" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none'">
-                                    <i data-lucide="play" class="absolute inset-0 m-auto w-8 h-8 text-white z-10 drop-shadow-lg"></i>
+                                <div class="w-32 h-20 bg-gray-800 rounded-lg relative shrink-0 overflow-hidden">
+                                    <img src="${thumb}" loading="lazy" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                                    <i data-lucide="play-circle" class="absolute inset-0 m-auto w-8 h-8 text-white z-10 drop-shadow-lg opacity-80"></i>
                                 </div>
                             `;
                             const lockBadge = isLocked ? `<span class="ml-2 bg-gray-800 text-accent text-[10px] px-2 py-0.5 rounded-full font-bold">Locked</span>` : '';
 
                             html += `
-                                <div class="flex items-center space-x-4 p-4 bg-surface rounded-xl hover:bg-gray-800 transition-colors cursor-pointer ${isLocked?'opacity-75':'border-l-4 border-accent focus-ring'}" tabindex="0" onclick="${action}">
-                                    <h2 class="text-2xl font-bold text-gray-600 w-8 text-center shrink-0">${index + 1}</h2>
+                                <div class="flex items-center space-x-4 p-3 hover:bg-gray-800/50 rounded-xl transition-colors cursor-pointer ${isLocked?'opacity-60':'focus-ring'}" tabindex="0" onclick="${action}">
+                                    <h2 class="text-xl font-bold text-gray-500 w-6 text-center shrink-0">${index + 1}</h2>
                                     ${lockUI}
                                     <div class="flex-1 min-w-0">
-                                        <h4 class="font-bold text-white flex items-center truncate">${app.ui.escapeHTML(ep.title)} ${lockBadge}</h4>
-                                        <p class="text-sm text-gray-400 line-clamp-1">${app.ui.escapeHTML(ep.description || '')}</p>
+                                        <h4 class="font-bold text-white text-sm flex items-center truncate">${app.ui.escapeHTML(ep.title)} ${lockBadge}</h4>
+                                        <p class="text-xs text-gray-400 line-clamp-1 mt-0.5">${app.ui.escapeHTML(ep.description || 'Watch now')}</p>
+                                        <span class="text-[10px] font-bold text-gray-500 mt-1 inline-block">${ep.duration || '00:00'}</span>
                                     </div>
-                                    <span class="text-xs font-bold text-gray-500 hidden sm:block shrink-0">${ep.duration || '00:00'}</span>
                                 </div>
                             `;
                         });
                         listContainer.innerHTML = html;
                         lucide.createIcons();
+
+                        // Auto-play the first episode if it's unlocked and no other is playing!
+                        if(episodes.length > 0 && (!episodes[0].isFree || episodes[0].unlocked) && !this.currentEpisodeId) {
+                            if(episodes[0].mediaUrl) this.play(episodes[0]._id, episodes[0].mediaUrl, 0);
+                        }
+
                     } catch (err) {
                         listContainer.innerHTML = app.ui.getRetryStateHtml('Failed to load episodes', `app.player.loadSeason('${seasonId}')`);
                     }
                 },
 
                 play(episodeId, mediaUrl, startTime = 0) {
+                    app.ui.toggleSheet('episodes-sheet', true); // hide sheet
+                    
+                    if (!mediaUrl || mediaUrl === 'undefined') {
+                        app.toast.fire({ icon: 'error', title: 'Video Unavailable', text: 'This file failed to upload correctly previously.' });
+                        return;
+                    }
+
                     this.currentEpisodeId = episodeId;
                     this.lastSavedTime = startTime;
-                    document.getElementById('video-overlay').classList.add('d-none');
                     const secureUrl = mediaUrl;
 
                     if (Hls.isSupported() && secureUrl.includes('.m3u8')) {
@@ -1357,30 +1418,21 @@
                             this.videoElem.currentTime = startTime;
                             this.videoElem.play().catch(e => console.log('Autoplay blocked', e));
                         });
-                        this.hls.on(Hls.Events.ERROR, (event, data) => {
-                            if (data.fatal) {
-                                switch (data.type) {
-                                    case Hls.ErrorTypes.NETWORK_ERROR: this.hls.startLoad(); break;
-                                    case Hls.ErrorTypes.MEDIA_ERROR: this.hls.recoverMediaError(); break;
-                                    default: this.hls.destroy(); break;
-                                }
-                            }
-                        });
                     } else {
                         this.videoElem.src = secureUrl;
                         this.videoElem.currentTime = startTime;
                         this.videoElem.play().catch(e => console.log('Autoplay blocked', e));
                     }
-                    this.videoElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 },
 
                 close() {
                     if (this.currentEpisodeId) this.saveProgress(this.currentEpisodeId, this.videoElem.currentTime);
                     if (this.videoElem) { this.videoElem.pause(); this.videoElem.src = ""; this.videoElem.removeAttribute('src'); }
                     if (this.hls) { this.hls.destroy(); this.hls = null; }
-                    document.getElementById('video-overlay').classList.remove('d-none');
                     this.currentEpisodeId = null;
                     this.lastSavedTime = 0;
+                    app.ui.toggleSheet('episodes-sheet', true);
+                    app.ui.toggleSheet('comments-sheet', true);
                 }
             },
 
@@ -1432,6 +1484,15 @@
 
             // --- UI HELPERS & MODALS ---
             ui: {
+                toggleSheet(id, forceClose = false) {
+                    const sheet = document.getElementById(id);
+                    if (forceClose || !sheet.classList.contains('translate-y-full')) {
+                        sheet.classList.add('translate-y-full');
+                    } else {
+                        sheet.classList.remove('translate-y-full');
+                    }
+                },
+
                 escapeHTML(str) {
                     if (typeof str !== 'string') return str;
                     const div = document.createElement('div');
@@ -1454,6 +1515,8 @@
                         document.getElementById('ui-avatar').src = u.avatarUrl;
                         document.getElementById('ui-avatar').classList.remove('d-none');
                         document.getElementById('ui-avatar-fallback').classList.add('d-none');
+                        // Update TikTok Player Avatar
+                        document.getElementById('player-creator-avatar').src = u.avatarUrl;
                     } else {
                         document.getElementById('profile-avatar-fallback').innerText = init;
                         document.getElementById('ui-avatar-fallback').innerText = init;
@@ -1659,5 +1722,3 @@
     </script>
 </body>
 </html>
-
-    
