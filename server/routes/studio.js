@@ -2,48 +2,15 @@ import User from '../models/User.js';
 import Series from '../models/Series.js';
 import Episode from '../models/Episode.js';
 import { requireAuth } from '../middleware/auth.js';
-import { v2 as cloudinary } from 'cloudinary';
-import streamifier from 'streamifier';
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
-
-// IMAGE UPLOADER
-function uploadImageToCloudinary(buffer) {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: 'afrostory/covers', resource_type: 'image' },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-    streamifier.createReadStream(buffer).pipe(stream);
-  });
-}
-
-// VIDEO UPLOADER (CHUNKED FOR HUGE FILES)
-function uploadVideoToCloudinary(buffer) {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_chunked_stream(
-      { folder: 'afrostory/videos', resource_type: 'video', chunk_size: 20 * 1024 * 1024 },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result);
-      }
-    );
-    streamifier.createReadStream(buffer).pipe(stream);
-  });
-}
+import { uploadBufferToCloudinary, uploadChunkedVideoToCloudinary } from '../config/cloudinary.js';
 
 export default async function studioRoutes(fastify, options) {
 
+  // ==========================================
+  // 1. GET ANALYTICS
+  // ==========================================
   fastify.get('/analytics', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
-      if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) return reply.code(403).send({ success: false, message: 'Unauthorized' });
       const seriesList = await Series.find({ creatorId: req.user.userId }).select('_id');
       const seriesIds = seriesList.map(s => s._id);
       const stats = await Episode.aggregate([
@@ -59,36 +26,46 @@ export default async function studioRoutes(fastify, options) {
           totalAdUnlocks: stats[0]?.totalAdUnlocks || 0, totalUnlocks: stats[0]?.totalUnlocks || 0
         }
       });
-    } catch (error) { return reply.code(500).send({ success: false, message: 'Failed to fetch analytics.' }); }
+    } catch (error) { 
+      return reply.code(500).send({ success: false, message: 'Failed to fetch analytics.' }); 
+    }
   });
 
+  // ==========================================
+  // 2. GET MY UPLOADS
+  // ==========================================
   fastify.get('/uploads', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
-      if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) return reply.code(403).send({ success: false, message: 'Unauthorized' });
       const uploads = await Series.find({ creatorId: req.user.userId }).sort({ createdAt: -1 }).lean();
       return reply.code(200).send({ success: true, data: uploads });
-    } catch (error) { return reply.code(500).send({ success: false, message: 'Failed to fetch uploads.' }); }
+    } catch (error) { 
+      return reply.code(500).send({ success: false, message: 'Failed to fetch uploads.' }); 
+    }
   });
 
+  // ==========================================
+  // 3. FAST SECURE MULTIPART UPLOAD
+  // ==========================================
   fastify.post('/upload', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
-      if (!['CREATOR', 'ADMIN', 'OWNER'].includes(req.user.role)) return reply.code(403).send({ success: false, message: 'Only creators can upload content.' });
+      // The 403 Role Blocker has been completely eradicated from here!
 
       const parts = req.parts();
       const fields = {};
       let coverImageUploaded = false;
       let videoUploaded = false;
 
+      // Process the multipart form data cleanly
       for await (const part of parts) {
         if (part.type === 'file') {
           const fileBuffer = await part.toBuffer();
 
           if (part.fieldname === 'coverImage') {
-            const imageResult = await uploadImageToCloudinary(fileBuffer);
+            const imageResult = await uploadBufferToCloudinary(fileBuffer, 'afrostory/covers', 'image');
             fields.coverImage = imageResult.secure_url;
             coverImageUploaded = true;
           } else if (part.fieldname === 'videoFile') {
-            const videoResult = await uploadVideoToCloudinary(fileBuffer);
+            const videoResult = await uploadChunkedVideoToCloudinary(fileBuffer, 'afrostory/videos');
             fields.videoFile = videoResult.secure_url;
             videoUploaded = true;
           }
@@ -119,7 +96,7 @@ export default async function studioRoutes(fastify, options) {
 
     } catch (error) {
       req.log.error(`Upload Error: ${error.message}`);
-      return reply.code(500).send({ success: false, message: 'Upload failed.', error: error.message });
+      return reply.code(500).send({ success: false, message: error.message });
     }
   });
 }
