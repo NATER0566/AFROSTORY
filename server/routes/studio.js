@@ -2,7 +2,45 @@ import User from '../models/User.js';
 import Series from '../models/Series.js';
 import Episode from '../models/Episode.js';
 import { requireAuth } from '../middleware/auth.js';
-import { uploadBufferToCloudinary, uploadChunkedVideoToCloudinary } from '../config/cloudinary.js';
+import { v2 as cloudinary } from 'cloudinary';
+import streamifier from 'streamifier';
+
+// ==========================================
+// DIRECT CLOUDINARY CONFIG FROM RENDER ENV
+// ==========================================
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// IMAGE UPLOADER HELPER
+function uploadImageToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'afrostory/covers', resource_type: 'image' },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+}
+
+// VIDEO UPLOADER HELPER (CHUNKED FOR HUGE FILES)
+function uploadVideoToCloudinary(buffer) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_chunked_stream(
+      { folder: 'afrostory/videos', resource_type: 'video', chunk_size: 20 * 1024 * 1024 },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    streamifier.createReadStream(buffer).pipe(stream);
+  });
+}
 
 export default async function studioRoutes(fastify, options) {
 
@@ -48,8 +86,6 @@ export default async function studioRoutes(fastify, options) {
   // ==========================================
   fastify.post('/upload', { preHandler: [requireAuth] }, async (req, reply) => {
     try {
-      // The 403 Role Blocker has been completely eradicated from here!
-
       const parts = req.parts();
       const fields = {};
       let coverImageUploaded = false;
@@ -61,11 +97,11 @@ export default async function studioRoutes(fastify, options) {
           const fileBuffer = await part.toBuffer();
 
           if (part.fieldname === 'coverImage') {
-            const imageResult = await uploadBufferToCloudinary(fileBuffer, 'afrostory/covers', 'image');
+            const imageResult = await uploadImageToCloudinary(fileBuffer);
             fields.coverImage = imageResult.secure_url;
             coverImageUploaded = true;
           } else if (part.fieldname === 'videoFile') {
-            const videoResult = await uploadChunkedVideoToCloudinary(fileBuffer, 'afrostory/videos');
+            const videoResult = await uploadVideoToCloudinary(fileBuffer);
             fields.videoFile = videoResult.secure_url;
             videoUploaded = true;
           }
